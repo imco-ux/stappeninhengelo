@@ -12,22 +12,37 @@ const SNELLE_LINKS = [
   { label: 'Locaties', url: '/locaties' },
 ];
 
+function localNaarISO(local) {
+  if (!local) return null;
+  return new Date(local).toISOString();
+}
+
+function isoNaarLocal(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function AdminNotificaties() {
-  const [form, setForm] = useState({ title: '', body: '', url: '/' });
+  const [form, setForm] = useState({ title: '', body: '', url: '/', gepland: false, verstuur_op: '' });
   const [bezig, setBezig] = useState(false);
   const [melding, setMelding] = useState('');
   const [aantalSubs, setAantalSubs] = useState(null);
   const [geschiedenis, setGeschiedenis] = useState([]);
+  const [geplandeLijst, setGeplandeLijst] = useState([]);
 
   useEffect(() => { laad(); }, []);
 
   async function laad() {
-    const [subRes, histRes] = await Promise.all([
+    const [subRes, histRes, geplandRes] = await Promise.all([
       supabase.from('push_subscriptions').select('id', { count: 'exact', head: true }),
       supabase.from('push_geschiedenis').select('*').order('verstuurd_op', { ascending: false }).limit(20),
+      supabase.from('push_gepland').select('*').eq('verstuurd', false).order('verstuur_op', { ascending: true }),
     ]);
     setAantalSubs(subRes.count || 0);
     setGeschiedenis(histRes.data || []);
+    setGeplandeLijst(geplandRes.data || []);
   }
 
   function upd(v, w) { setForm(f => ({ ...f, [v]: w })); }
@@ -36,34 +51,53 @@ export default function AdminNotificaties() {
     e.preventDefault();
     if (!form.title || !form.body) return;
     setBezig(true);
+
     try {
-      const res = await fetch('/api/push-send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (data.error) {
-        setMelding('❌ Fout: ' + data.error);
-      } else {
-        await supabase.from('push_geschiedenis').insert({
+      if (form.gepland && form.verstuur_op) {
+        // Inplannen
+        const { error } = await supabase.from('push_gepland').insert({
           title: form.title,
           body: form.body,
           url: form.url,
-          verstuurd_naar: data.verstuurd,
+          verstuur_op: localNaarISO(form.verstuur_op),
+          verstuurd: false,
+        });
+        if (error) throw new Error(error.message);
+        setMelding(`✓ Ingepland voor ${new Date(form.verstuur_op).toLocaleString('nl-NL')}`);
+      } else {
+        // Direct versturen
+        const res = await fetch('/api/push-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: form.title, body: form.body, url: form.url }),
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        await supabase.from('push_geschiedenis').insert({
+          title: form.title, body: form.body, url: form.url, verstuurd_naar: data.verstuurd,
         });
         setMelding(`✓ Verstuurd naar ${data.verstuurd} apparaten`);
-        setForm({ title: '', body: '', url: '/' });
-        laad();
       }
+      setForm({ title: '', body: '', url: '/', gepland: false, verstuur_op: '' });
+      laad();
     } catch (e) {
-      setMelding('❌ ' + e.message);
+      setMelding('❌ Fout: ' + e.message);
     }
+
     setBezig(false);
     setTimeout(() => setMelding(''), 5000);
   }
 
+  async function annuleerGepland(id) {
+    if (!confirm('Geplande notificatie annuleren?')) return;
+    await supabase.from('push_gepland').delete().eq('id', id);
+    setGeplandeLijst(l => l.filter(x => x.id !== id));
+  }
+
   const INP = 'w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-oranje';
+
+  // Minimum datetime = nu + 2 minuten
+  const minDT = new Date(Date.now() + 2 * 60000).toISOString().slice(0, 16);
 
   return (
     <AdminShell>
@@ -83,7 +117,7 @@ export default function AdminNotificaties() {
           </div>
         )}
 
-        <form onSubmit={verstuur} className="rounded-xl border border-[#1e1e1e] p-6 space-y-4 mb-8" style={{ backgroundColor: '#141414' }}>
+        <form onSubmit={verstuur} className="rounded-xl border border-[#1e1e1e] p-6 space-y-4 mb-6" style={{ backgroundColor: '#141414' }}>
           <div>
             <label className="text-xs font-bold uppercase text-gray-500 block mb-1">Titel *</label>
             <input value={form.title} onChange={e => upd('title', e.target.value)} required
@@ -110,6 +144,32 @@ export default function AdminNotificaties() {
               placeholder="/agenda of /events/slug" className={INP} />
           </div>
 
+          {/* Inplannen toggle */}
+          <div className="border-t border-[#1e1e1e] pt-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div onClick={() => upd('gepland', !form.gepland)}
+                className={`w-10 h-6 rounded-full relative transition-colors flex-shrink-0 ${form.gepland ? 'bg-oranje' : 'bg-[#333]'}`}>
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${form.gepland ? 'translate-x-5' : 'translate-x-1'}`} />
+              </div>
+              <span className="text-sm text-gray-300 font-semibold">Inplannen voor later</span>
+            </label>
+
+            {form.gepland && (
+              <div className="mt-3">
+                <label className="text-xs font-bold uppercase text-gray-500 block mb-1">Datum & tijd</label>
+                <input
+                  type="datetime-local"
+                  value={form.verstuur_op}
+                  min={minDT}
+                  onChange={e => upd('verstuur_op', e.target.value)}
+                  required={form.gepland}
+                  className={INP + ' [color-scheme:dark]'}
+                />
+                <p className="text-xs text-gray-600 mt-1">Wordt automatisch verstuurd op het gekozen moment</p>
+              </div>
+            )}
+          </div>
+
           {/* Preview */}
           {(form.title || form.body) && (
             <div className="rounded-xl border border-[#2a2a2a] p-4 bg-[#0d0d0d]">
@@ -127,9 +187,40 @@ export default function AdminNotificaties() {
           <button type="submit" disabled={bezig || aantalSubs === 0}
             className="w-full py-3 rounded-xl font-black uppercase text-sm text-black disabled:opacity-40"
             style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}>
-            {bezig ? 'Versturen...' : `Verstuur naar ${aantalSubs || 0} apparaten →`}
+            {bezig ? 'Bezig...' : form.gepland
+              ? `Inplannen →`
+              : `Verstuur nu naar ${aantalSubs || 0} apparaten →`}
           </button>
         </form>
+
+        {/* Geplande notificaties */}
+        {geplandeLijst.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-black uppercase mb-3" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
+              Ingepland
+            </h2>
+            <div className="space-y-2">
+              {geplandeLijst.map(g => (
+                <div key={g.id} className="rounded-xl border border-yellow-800/40 p-4" style={{ backgroundColor: '#1a1400' }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-yellow-400 text-xs font-bold">⏰ {new Date(g.verstuur_op).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <p className="text-white font-bold text-sm">{g.title}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">{g.body}</p>
+                      {g.url && g.url !== '/' && <p className="text-oranje text-xs mt-1">→ {g.url}</p>}
+                    </div>
+                    <button onClick={() => annuleerGepland(g.id)}
+                      className="text-red-400 text-xs border border-red-900/40 px-2 py-1 rounded hover:bg-red-950/30 flex-shrink-0">
+                      Annuleer
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Geschiedenis */}
         {geschiedenis.length > 0 && (
