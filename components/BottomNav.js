@@ -22,12 +22,16 @@ const navItems = [
     href: '/acties',
     label: 'Acties',
     icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></svg>,
-    highlight: true,
   },
   {
     href: '/prijzen',
     label: 'Prijzen',
     icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>,
+  },
+  {
+    href: '/account',
+    label: 'Account',
+    icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>,
   },
 ];
 
@@ -52,13 +56,8 @@ export default function BottomNav() {
               key={item.href}
               href={item.href}
               className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-3 transition-colors ${
-                item.highlight
-                  ? 'text-black'
-                  : actief
-                  ? 'text-oranje'
-                  : 'text-gray-600 hover:text-gray-300'
+                actief ? 'text-oranje' : 'text-gray-600 hover:text-gray-300'
               }`}
-              style={item.highlight ? { backgroundColor: '#F27A00' } : {}}
             >
               {item.icon}
               <span className="text-[9px] font-bold uppercase tracking-wide leading-none mt-0.5">

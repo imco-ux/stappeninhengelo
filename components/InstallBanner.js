@@ -1,12 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function InstallBanner() {
-  const [toestel, setToestel] = useState(null); // null | 'iphone' | 'android'
+  const [toestel, setToestel] = useState(null);
   const [gesloten, setGesloten] = useState(false);
+  const [isWebApp, setIsWebApp] = useState(true); // default true om flash te voorkomen
 
-  if (gesloten) return null;
+  useEffect(() => {
+    const standalone = window.navigator.standalone === true ||
+      window.matchMedia('(display-mode: standalone)').matches;
+    setIsWebApp(standalone);
+  }, []);
+
+  if (gesloten || isWebApp) return null;
 
   return (
     <section className="md:hidden mx-4 my-6 rounded-2xl border border-oranje/40 overflow-hidden" style={{ backgroundColor: '#0f0700' }}>
