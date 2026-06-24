@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 const OPSLAG_KEY = 'install_banner_gesloten';
-const WACHT_MS = 25000; // 25 seconden
+const WACHT_MS = 10000; // 10 seconden
 
 export default function InstallBanner() {
   const [zichtbaar, setZichtbaar] = useState(false);
@@ -93,8 +93,8 @@ export default function InstallBanner() {
               <p className="text-oranje text-xs font-bold uppercase tracking-wide mb-2">Via Safari</p>
               <ol className="space-y-2">
                 {[
-                  'Open deze pagina in Safari',
-                  'Tik onderaan op het Deel-icoon (vierkantje met pijltje omhoog)',
+                  'Tik rechtsbovenin op de drie puntjes (···)',
+                  'Tik op "Deel"',
                   'Scroll omlaag en tik op "Zet op beginscherm"',
                   'Tik op "Voeg toe" — klaar!',
                 ].map((tekst, i) => (
@@ -105,13 +105,13 @@ export default function InstallBanner() {
                 ))}
               </ol>
             </div>
-            {/* Chrome / andere browser */}
+            {/* Chrome */}
             <div className="border-t border-[#1e1e1e] pt-3">
-              <p className="text-oranje text-xs font-bold uppercase tracking-wide mb-2">Via Chrome of andere browser</p>
+              <p className="text-oranje text-xs font-bold uppercase tracking-wide mb-2">Via Chrome</p>
               <ol className="space-y-2">
                 {[
-                  'Tik rechtsbovenin op de drie puntjes (⋮) of het Deel-icoon',
-                  'Tik op "Toevoegen aan beginscherm" of "Zet op beginscherm"',
+                  'Tik op het Deel-icoon (vierkantje met pijltje omhoog)',
+                  'Tik op "Zet op beginscherm"',
                   'Tik op "Voeg toe" — klaar!',
                 ].map((tekst, i) => (
                   <li key={i} className="flex gap-3">

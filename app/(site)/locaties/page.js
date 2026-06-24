@@ -162,7 +162,7 @@ export default function LocatiesPage() {
       </section>
 
       {/* Filterbar — sticky */}
-      <section className="sticky z-40 border-b border-[#1a1a1a]" style={{ backgroundColor: '#0a0a0a', top: 'calc(3.5rem + env(safe-area-inset-top))' }}>
+      <section className="border-b border-[#1a1a1a]" style={{ backgroundColor: '#0a0a0a' }}>
         <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center gap-3">
 
           {/* Filter knop */}
