@@ -10,7 +10,10 @@ export default function InstallBanner() {
   const [toestel, setToestel] = useState(null);
 
   useEffect(() => {
-    // Niet tonen in web app
+    // Niet tonen op desktop of in web app
+    const isMobiel = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (!isMobiel) return;
+
     const isWebApp =
       window.navigator.standalone === true ||
       window.matchMedia('(display-mode: standalone)').matches;
