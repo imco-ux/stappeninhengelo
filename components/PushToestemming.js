@@ -18,6 +18,13 @@ export default function PushToestemming() {
   const [bezig, setBezig] = useState(false);
 
   useEffect(() => {
+    const isWebApp =
+      window.navigator.standalone === true ||
+      window.matchMedia('(display-mode: standalone)').matches;
+    if (!isWebApp) {
+      setStatus('niet-ondersteund');
+      return;
+    }
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setStatus('niet-ondersteund');
       return;
