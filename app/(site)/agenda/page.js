@@ -101,7 +101,7 @@ export default function AgendaPage() {
         </div>
       </section>
 
-      <section className="sticky top-16 z-40 bg-black border-b border-[#1a1a1a] px-4 py-3">
+      <section className="sticky z-40 bg-black border-b border-[#1a1a1a] px-4 py-3" style={{ top: 'calc(3.5rem + env(safe-area-inset-top))' }}>
         <div className="max-w-6xl mx-auto space-y-2">
           {/* Dagfilters */}
           <div className="flex gap-2 flex-wrap">

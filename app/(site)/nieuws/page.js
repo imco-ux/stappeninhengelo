@@ -98,7 +98,7 @@ export default function NieuwsPage() {
       </section>
 
       {/* Tabs */}
-      <section className="sticky top-16 z-40 border-b border-[#1a1a1a]" style={{ backgroundColor: '#0a0a0a' }}>
+      <section className="sticky z-40 border-b border-[#1a1a1a]" style={{ backgroundColor: '#0a0a0a', top: 'calc(3.5rem + env(safe-area-inset-top))' }}>
         <div className="max-w-6xl mx-auto px-4 py-2 flex gap-3">
           {[
             { key: 'alles', label: 'Alles' },

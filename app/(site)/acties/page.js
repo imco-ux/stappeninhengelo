@@ -156,7 +156,7 @@ export default function ActiesPage() {
       </section>
 
       {/* Dag filters */}
-      <section className="sticky top-16 z-40 bg-black border-b border-[#1a1a1a] px-4 py-3">
+      <section className="sticky z-40 bg-black border-b border-[#1a1a1a] px-4 py-3" style={{ top: 'calc(3.5rem + env(safe-area-inset-top))' }}>
         <div className="max-w-6xl mx-auto flex gap-2 flex-wrap">
           <button onClick={() => setDagFilter(null)}
             className={`text-xs font-bold uppercase px-4 py-1.5 rounded-full border transition-colors ${dagFilter === null ? 'bg-oranje border-oranje text-black' : 'border-[#333] text-gray-400 hover:border-oranje hover:text-oranje'}`}>
