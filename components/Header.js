@@ -12,7 +12,7 @@ export default function Header() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 bg-black border-b border-[#1a1a1a]">
+    <header className="sticky top-0 z-50 bg-black border-b border-[#1a1a1a]" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-14 md:h-16">
 
         {/* Logo */}
