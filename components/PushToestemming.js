@@ -49,14 +49,21 @@ export default function PushToestemming() {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC),
       });
-      await fetch('/api/push-subscribe', {
+      const res = await fetch('/api/push-subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription: sub }),
+        body: JSON.stringify({ subscription: sub.toJSON() }),
       });
+      const data = await res.json();
+      if (data.error) {
+        alert('Fout bij opslaan: ' + data.error);
+        setBezig(false);
+        return;
+      }
       localStorage.setItem('push_gevraagd', '1');
       setStatus('geabonneerd');
     } catch (e) {
+      alert('Push fout: ' + e.message);
       if (Notification.permission === 'denied') setStatus('geblokkeerd');
       else setStatus('gevraagd');
     }

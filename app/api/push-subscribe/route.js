@@ -11,10 +11,11 @@ export async function POST(req) {
     if (!subscription?.endpoint) {
       return Response.json({ error: 'Geen geldige subscription' }, { status: 400 });
     }
-    await supabase.from('push_subscriptions').upsert(
+    const { error } = await supabase.from('push_subscriptions').upsert(
       { endpoint: subscription.endpoint, subscription: subscription },
       { onConflict: 'endpoint' }
     );
+    if (error) return Response.json({ error: error.message }, { status: 500 });
     return Response.json({ ok: true });
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });
