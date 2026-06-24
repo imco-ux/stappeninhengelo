@@ -11,6 +11,8 @@ const MAANDEN = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','no
 const EVENT_TYPES = ['Feestje','Club Night','Live Muziek','Karaoke','Quiz','Comedy','Sportavond','Festival','Borrel','Overig'];
 const LABEL_SUGGESTIES = ['50% KORT', '1+1', 'GRATIS', '2e GRATIS', 'HAPPY HOUR', 'DEAL', 'NIEUW', 'ACTIE'];
 const DAGEN_LANG = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+const GENRE_OPTIES = ['House','Techno','R&B','Hip-Hop','Latin','Reggaeton','Dancehall','Afrobeats','Pop','Dance','Hardstyle','Drum & Bass','Trance','Disco','Funk','Soul','Jazz','Rock','Live Band'];
+const PUBLIEK_OPTIES = ['18+','21+','Studenten','Young Professionals','LGBTQ+','Gemengd','Dames avond','Heren avond','Koppels','VIP','Families','Iedereen welkom'];
 
 function formatDatum(iso) {
   if (!iso) return '';
@@ -19,6 +21,7 @@ function formatDatum(iso) {
 }
 
 function leegEdit(ev) {
+  const ei = ev.extra_info || {};
   return {
     title: ev.title || '',
     type: ev.type || 'Feestje',
@@ -34,6 +37,15 @@ function leegEdit(ev) {
     knop_url: ev.knop_url || '',
     meta_pixel_id: ev.meta_pixel_id || '',
     tiktok_pixel_id: ev.tiktok_pixel_id || '',
+    ticket_shortcode: ev.ticket_shortcode || '',
+    artiesten: ei.artiesten || '',
+    verwacht_bezoekers: ei.verwacht_bezoekers || '',
+    genres: ei.genres || [],
+    publiek: ei.publiek || [],
+    instagram_tags: ei.instagram_tags || '',
+    crosspost_instagram: ei.crosspost_instagram || false,
+    instagram_audio: ei.instagram_audio || '',
+    promotie_kanalen: ei.promotie_kanalen || '',
   };
 }
 
@@ -46,6 +58,8 @@ export default function EventsPage() {
   const [melding, setMelding]   = useState('');
   const [posterBezig, setPosterBezig] = useState(false);
   const [mijnVenues, setMijnVenues] = useState([]);
+  const [eigenGenre, setEigenGenre] = useState('');
+  const [eigenPubliek, setEigenPubliek] = useState('');
   const [actieAanmaken, setActieAanmaken] = useState(false);
   const [actieForm, setActieForm] = useState({
     titel: '', omschrijving: '', label: '',
@@ -126,6 +140,17 @@ export default function EventsPage() {
       knop_url: form.knop_url || null,
       meta_pixel_id: form.meta_pixel_id || null,
       tiktok_pixel_id: form.tiktok_pixel_id || null,
+      ticket_shortcode: form.ticket_shortcode || null,
+      extra_info: {
+        artiesten: form.artiesten || null,
+        verwacht_bezoekers: form.verwacht_bezoekers || null,
+        genres: form.genres || [],
+        publiek: form.publiek || [],
+        instagram_tags: form.instagram_tags || null,
+        crosspost_instagram: form.crosspost_instagram || false,
+        instagram_audio: form.instagram_audio || null,
+        promotie_kanalen: form.promotie_kanalen || null,
+      },
     }).eq('id', bewerkId);
 
     if (!error) {
@@ -320,6 +345,93 @@ export default function EventsPage() {
                         <textarea value={form.omschrijving} onChange={e => upd('omschrijving', e.target.value)}
                           rows={3} className="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-oranje resize-none" />
                       </div>
+
+                      {/* Line-up & Publiek */}
+                      <div className="col-span-2">
+                        <label className="text-xs font-bold uppercase tracking-wide text-gray-600 block mb-1">Artiesten / DJ&apos;s</label>
+                        <input value={form.artiesten} onChange={e => upd('artiesten', e.target.value)}
+                          placeholder="DJ Naam, Artiest 1, Artiest 2" className={INP} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold uppercase tracking-wide text-gray-600 block mb-1">Verwacht bezoekers</label>
+                        <input value={form.verwacht_bezoekers} onChange={e => upd('verwacht_bezoekers', e.target.value)}
+                          placeholder="bijv. 200" className={INP} />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs font-bold uppercase tracking-wide text-gray-600 block mb-1">Genres</label>
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {[...GENRE_OPTIES, ...form.genres.filter(g => !GENRE_OPTIES.includes(g))].map(g => (
+                            <button key={g} type="button"
+                              onClick={() => upd('genres', form.genres.includes(g) ? form.genres.filter(x => x !== g) : [...form.genres, g])}
+                              className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-colors ${form.genres.includes(g) ? 'bg-oranje border-oranje text-black' : 'border-[#333] text-gray-500 hover:border-oranje hover:text-oranje'}`}>
+                              {g}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <input value={eigenGenre} onChange={e => setEigenGenre(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (eigenGenre.trim() && !form.genres.includes(eigenGenre.trim())) upd('genres', [...form.genres, eigenGenre.trim()]); setEigenGenre(''); }}}
+                            placeholder="Eigen genre..." className={INP} />
+                          <button type="button" onClick={() => { if (eigenGenre.trim() && !form.genres.includes(eigenGenre.trim())) upd('genres', [...form.genres, eigenGenre.trim()]); setEigenGenre(''); }}
+                            className="px-3 py-2 rounded-lg text-xs font-bold border border-oranje text-oranje hover:bg-oranje hover:text-black transition-colors whitespace-nowrap">
+                            + Voeg toe
+                          </button>
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs font-bold uppercase tracking-wide text-gray-600 block mb-1">Publiek</label>
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {[...PUBLIEK_OPTIES, ...form.publiek.filter(p => !PUBLIEK_OPTIES.includes(p))].map(p => (
+                            <button key={p} type="button"
+                              onClick={() => upd('publiek', form.publiek.includes(p) ? form.publiek.filter(x => x !== p) : [...form.publiek, p])}
+                              className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-colors ${form.publiek.includes(p) ? 'bg-oranje border-oranje text-black' : 'border-[#333] text-gray-500 hover:border-oranje hover:text-oranje'}`}>
+                              {p}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <input value={eigenPubliek} onChange={e => setEigenPubliek(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (eigenPubliek.trim() && !form.publiek.includes(eigenPubliek.trim())) upd('publiek', [...form.publiek, eigenPubliek.trim()]); setEigenPubliek(''); }}}
+                            placeholder="Eigen publiek..." className={INP} />
+                          <button type="button" onClick={() => { if (eigenPubliek.trim() && !form.publiek.includes(eigenPubliek.trim())) upd('publiek', [...form.publiek, eigenPubliek.trim()]); setEigenPubliek(''); }}
+                            className="px-3 py-2 rounded-lg text-xs font-bold border border-oranje text-oranje hover:bg-oranje hover:text-black transition-colors whitespace-nowrap">
+                            + Voeg toe
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Sociale media */}
+                      <div className="col-span-2">
+                        <label className="text-xs font-bold uppercase tracking-wide text-gray-600 block mb-1">Instagram tags</label>
+                        <input value={form.instagram_tags} onChange={e => upd('instagram_tags', e.target.value)}
+                          placeholder="@account1, @account2" className={INP} />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs font-bold uppercase tracking-wide text-gray-600 block mb-1">Instagram audio</label>
+                        <input value={form.instagram_audio} onChange={e => upd('instagram_audio', e.target.value)}
+                          placeholder="Naam van het nummer / link" className={INP} />
+                      </div>
+                      <div className="col-span-2 flex items-center gap-3">
+                        <button type="button" onClick={() => upd('crosspost_instagram', !form.crosspost_instagram)}
+                          className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 ${form.crosspost_instagram ? 'bg-oranje' : 'bg-[#333]'}`}>
+                          <span className={`block w-4 h-4 rounded-full bg-white mx-0.5 transition-transform ${form.crosspost_instagram ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </button>
+                        <span className="text-sm text-gray-300">Crossposten met Stappen In Hengelo op Instagram</span>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs font-bold uppercase tracking-wide text-gray-600 block mb-1">Promotie kanalen</label>
+                        <input value={form.promotie_kanalen} onChange={e => upd('promotie_kanalen', e.target.value)}
+                          placeholder="bijv. Instagram, Flyers, Facebook" className={INP} />
+                      </div>
+
+                      {/* Ticket shortcode */}
+                      <div className="col-span-2">
+                        <label className="text-xs font-bold uppercase tracking-wide text-gray-600 block mb-1">Ticket shortcode / embed</label>
+                        <textarea value={form.ticket_shortcode} onChange={e => upd('ticket_shortcode', e.target.value)}
+                          rows={2} placeholder="<iframe ...> of embed code van ticketshop"
+                          className="w-full bg-[#0d0d0d] border border-[#1e1e1e] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-oranje resize-none font-mono" />
+                      </div>
+
                       <div>
                         <label className="text-xs font-bold uppercase tracking-wide text-gray-600 block mb-1">Knoptekst</label>
                         <input value={form.knop_label} onChange={e => upd('knop_label', e.target.value)}
