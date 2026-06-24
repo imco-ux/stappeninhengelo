@@ -9,11 +9,17 @@ const PlacesInput = dynamic(() => import('@/components/PlacesInput'), { ssr: fal
 
 const TYPES = ['Feestcafé','Club','Café','Karaokebar','Muziekcafé','Grand Café','Wijnbar','Biercafé','Cocktailbar','Brouwerij','Danscafé'];
 
+const DAGEN = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
+const leegTijden = () => Object.fromEntries(DAGEN.map(d => [d, { open: '', sluit: '', gesloten: false }]));
+
 const leegForm = {
   naam: '', type: 'Café', adres: '', lat: null, lng: null,
   telefoon: '', website: '', instagram: '',
   leeftijd: '18+', omschrijving: '', actief: true,
   logo_url: '', fotos: [],
+  openingstijden: leegTijden(),
+  kroegentocht_actief: false,
+  kroegentocht_gewicht: 1,
 };
 
 export default function AdminLocaties() {
@@ -40,12 +46,22 @@ export default function AdminLocaties() {
   }
 
   function bewerk(v) {
+    const basisTijden = leegTijden();
+    const opTijden = v.openingstijden || {};
+    const tijden = Object.fromEntries(DAGEN.map(d => [d, {
+      open: opTijden[d]?.open || '',
+      sluit: opTijden[d]?.sluit || '',
+      gesloten: opTijden[d]?.gesloten || false,
+    }]));
     setForm({
       naam: v.naam || '', type: v.type || 'Café', adres: v.adres || '',
       lat: v.lat ?? null, lng: v.lng ?? null,
       telefoon: v.telefoon || '', website: v.website || '', instagram: v.instagram || '',
       leeftijd: v.leeftijd || '18+', omschrijving: v.omschrijving || '', actief: v.actief ?? true,
       logo_url: v.logo_url || '', fotos: Array.isArray(v.fotos) ? v.fotos : [],
+      openingstijden: tijden,
+      kroegentocht_actief: v.kroegentocht_actief || false,
+      kroegentocht_gewicht: v.kroegentocht_gewicht || 1,
     });
     setBewerkId(v.id);
     setToonForm(true);
@@ -67,6 +83,9 @@ export default function AdminLocaties() {
       actief: form.actief,
       logo_url: form.logo_url || null,
       fotos: form.fotos.filter(Boolean),
+      openingstijden: form.openingstijden,
+      kroegentocht_actief: form.kroegentocht_actief,
+      kroegentocht_gewicht: form.kroegentocht_gewicht || 1,
       updated_at: new Date().toISOString(),
     };
     if (bewerkId) {
@@ -348,6 +367,57 @@ export default function AdminLocaties() {
                   </div>
                   <textarea value={form.omschrijving} onChange={e=>upd('omschrijving',e.target.value)} rows={3}
                     className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-oranje resize-none" />
+                </div>
+
+                {/* Openingstijden */}
+                <div className="col-span-2">
+                  <label className="text-xs font-bold uppercase text-gray-500 block mb-2">Openingstijden</label>
+                  <div className="space-y-2">
+                    {DAGEN.map(dag => {
+                      const t = form.openingstijden?.[dag] || { open: '', sluit: '', gesloten: false };
+                      return (
+                        <div key={dag} className="flex items-center gap-3">
+                          <span className="text-xs text-gray-500 w-20 flex-shrink-0">{dag}</span>
+                          <input type="checkbox" checked={!!t.gesloten}
+                            onChange={e => upd('openingstijden', { ...form.openingstijden, [dag]: { ...t, gesloten: e.target.checked } })}
+                            className="accent-oranje" />
+                          <span className="text-xs text-gray-600 w-14">Gesloten</span>
+                          {!t.gesloten && (
+                            <>
+                              <input type="time" value={t.open || ''}
+                                onChange={e => upd('openingstijden', { ...form.openingstijden, [dag]: { ...t, open: e.target.value } })}
+                                className="bg-[#0d0d0d] border border-[#2a2a2a] rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-oranje" />
+                              <span className="text-gray-600 text-xs">–</span>
+                              <input type="time" value={t.sluit || ''}
+                                onChange={e => upd('openingstijden', { ...form.openingstijden, [dag]: { ...t, sluit: e.target.value } })}
+                                className="bg-[#0d0d0d] border border-[#2a2a2a] rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-oranje" />
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Kroegentocht */}
+                <div className="col-span-2 border-t border-[#1e1e1e] pt-4">
+                  <label className="text-xs font-bold uppercase text-gray-500 block mb-3">Kroegentocht</label>
+                  <div className="flex items-center gap-3 mb-3">
+                    <input type="checkbox" id="kroeg_actief" checked={form.kroegentocht_actief}
+                      onChange={e => upd('kroegentocht_actief', e.target.checked)} className="accent-oranje" />
+                    <label htmlFor="kroeg_actief" className="text-sm text-gray-400 cursor-pointer">Doet mee aan kroegentocht</label>
+                  </div>
+                  {form.kroegentocht_actief && (
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Gewicht (1–5 · hogere waarde = vaker geselecteerd)</label>
+                      <div className="flex items-center gap-3">
+                        <input type="range" min="1" max="5" value={form.kroegentocht_gewicht || 1}
+                          onChange={e => upd('kroegentocht_gewicht', parseInt(e.target.value))}
+                          className="flex-1 accent-oranje" />
+                        <span className="text-oranje font-bold text-sm w-4">{form.kroegentocht_gewicht || 1}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="col-span-2 flex items-center gap-3">
