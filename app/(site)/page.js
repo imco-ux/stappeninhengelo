@@ -8,6 +8,7 @@ import Highlights from '@/components/Highlights';
 import Footer from '@/components/Footer';
 import EventModal from '@/components/EventModal';
 import InstallBanner from '@/components/InstallBanner';
+import PushToestemming from '@/components/PushToestemming';
 import EventPoster from '@/components/EventPoster';
 import { supabase } from '@/lib/supabase';
 import { berekenOpenStatus } from '@/lib/openingstijden';
@@ -339,6 +340,7 @@ export default function Home() {
 
       {/* ── Installatie banner (alleen mobiel) ── */}
       <InstallBanner />
+      <PushToestemming />
 
       {/* ── Events per dag ── */}
       <section className="px-4 py-10 bg-black">

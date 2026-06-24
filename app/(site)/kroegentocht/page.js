@@ -169,8 +169,20 @@ function ScoreKaart({ deelnemers, route, scores, onNieuw }) {
   );
 }
 
+const OPSLAG_KEY = 'kroegentocht_staat';
+
+function slaOp(staat) {
+  try { localStorage.setItem(OPSLAG_KEY, JSON.stringify(staat)); } catch {}
+}
+function laadOpgeslagen() {
+  try { return JSON.parse(localStorage.getItem(OPSLAG_KEY) || 'null'); } catch { return null; }
+}
+function verwijderOpgeslagen() {
+  try { localStorage.removeItem(OPSLAG_KEY); } catch {}
+}
+
 export default function KroegentochtPage() {
-  const [fase, setFase] = useState('start'); // start | stops | namen | actief | klaar
+  const [fase, setFase] = useState('start');
   const [aantalStops, setAantalStops] = useState(4);
   const [route, setRoute] = useState([]);
   const [deelnemers, setDeelnemers] = useState([{ naam: '', drinkt: true }, { naam: '', drinkt: true }]);
@@ -184,6 +196,7 @@ export default function KroegentochtPage() {
   const [gebruikteOpdrachten, setGebruikteOpdrachten] = useState([]);
   const [wachtOpOordeel, setWachtOpOordeel] = useState(false);
   const [scores, setScores] = useState([]);
+  const [hervatteBanner, setHervatteBanner] = useState(false);
 
   useEffect(() => {
     async function laad() {
@@ -195,9 +208,32 @@ export default function KroegentochtPage() {
       setAllVenues(venRes.data || []);
       setAllOpdrachten(opRes.data || []);
       setLadenData(false);
+
+      // Herstel opgeslagen staat
+      const opgeslagen = laadOpgeslagen();
+      if (opgeslagen?.fase === 'actief' && opgeslagen.route?.length > 0) {
+        setFase(opgeslagen.fase);
+        setRoute(opgeslagen.route);
+        setDeelnemers(opgeslagen.deelnemers);
+        setKroegIndex(opgeslagen.kroegIndex || 0);
+        setScores(opgeslagen.scores || []);
+        setGebruikteOpdrachten(opgeslagen.gebruikteOpdrachten || []);
+        setHuidigeOpdracht(opgeslagen.huidigeOpdracht || null);
+        setHervatteBanner(true);
+        setTimeout(() => setHervatteBanner(false), 4000);
+      }
     }
     laad();
   }, []);
+
+  // Sla staat op bij elke wijziging
+  useEffect(() => {
+    if (fase === 'actief') {
+      slaOp({ fase, route, deelnemers, kroegIndex, scores, gebruikteOpdrachten, huidigeOpdracht });
+    } else if (fase === 'klaar' || fase === 'start') {
+      verwijderOpgeslagen();
+    }
+  }, [fase, kroegIndex, scores, huidigeOpdracht]);
 
   function bouwRoute(n) {
     // Gewogen random selectie
@@ -267,11 +303,14 @@ export default function KroegentochtPage() {
   }
 
   function reset() {
+    verwijderOpgeslagen();
     setFase('start');
     setRoute([]);
     setDeelnemers([{ naam: '', drinkt: true }, { naam: '', drinkt: true }]);
     setScores([]);
     setKroegIndex(0);
+    setHuidigeOpdracht(null);
+    setGebruikteOpdrachten([]);
   }
 
   const actieveDeelnemers = deelnemers.filter(d => d.naam.trim());
@@ -415,6 +454,11 @@ export default function KroegentochtPage() {
       </div>
 
       <div className="flex-1 px-4 py-8 max-w-lg mx-auto w-full">
+        {hervatteBanner && (
+          <div className="mb-4 rounded-xl bg-green-950/40 border border-green-700/40 px-4 py-3 text-green-400 text-sm font-semibold">
+            ✓ Kroegentocht hervat waar je gebleven was!
+          </div>
+        )}
         {/* Stop indicator */}
         <div className="flex items-center justify-between mb-6">
           <p className="text-oranje text-xs font-bold uppercase tracking-widest">
