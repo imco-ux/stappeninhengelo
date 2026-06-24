@@ -399,7 +399,7 @@ export default function GoogleVenueMap({
                   kleur={kleur}
                   isActief={actief?.id === loc.id || actief?.naam === loc.naam}
                   isHover={(hoverId === loc.id || hoverId === loc._id) || isHovered}
-                  onClick={() => setActief(actief?.naam === loc.naam ? null : loc)}
+                  onClick={() => { window.location.href = `/locaties/${locSlug(loc)}`; }}
                   onMouseEnter={() => { onHoverPin?.(loc.id || loc._id); setHoverLoc(loc); }}
                   onMouseLeave={() => { onHoverPin?.(null); setHoverLoc(null); }}
                   openStatus={openStatus}
