@@ -43,8 +43,9 @@ function ActieKaart({ actie }) {
   const slug = actie.venue?.naam ? `/locaties/${slugify(actie.venue.naam)}` : actie.event?.slug ? `/events/${actie.event.slug}` : null;
   const label = geldigheidsLabel(actie);
 
+  const Wrapper = slug ? 'a' : 'div';
   return (
-    <div className="bg-[#141414] rounded-xl border border-[#252525] hover:border-oranje transition-colors overflow-hidden flex flex-col group">
+    <Wrapper href={slug || undefined} className="bg-[#141414] rounded-xl border border-[#252525] hover:border-oranje transition-colors overflow-hidden flex flex-col group cursor-pointer active:scale-[0.98]">
       {/* Foto 4:5 */}
       <div className="relative overflow-hidden" style={{ paddingBottom: '125%' }}>
         {foto ? (
@@ -90,24 +91,18 @@ function ActieKaart({ actie }) {
 
       {/* Content */}
       <div className="p-4 flex flex-col gap-2 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-lg font-black uppercase leading-tight flex-1" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
-            {actie.titel}
-          </h3>
-        </div>
+        <h3 className="text-lg font-black uppercase leading-tight" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
+          {actie.titel}
+        </h3>
         {actie.omschrijving && (
           <p className="text-sm text-gray-500 leading-relaxed line-clamp-2">{actie.omschrijving}</p>
         )}
         <div className="flex items-center justify-between mt-auto pt-2">
           <span className="text-xs text-gray-600 font-semibold">{label}</span>
-          {slug && (
-            <a href={slug} className="text-oranje text-xs font-bold hover:underline">
-              Bekijk →
-            </a>
-          )}
+          {slug && <span className="text-oranje text-xs font-bold">Bekijk →</span>}
         </div>
       </div>
-    </div>
+    </Wrapper>
   );
 }
 
