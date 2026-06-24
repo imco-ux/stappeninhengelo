@@ -13,19 +13,19 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 bg-black border-b border-[#1a1a1a]">
-      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-16">
+      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-14 md:h-16">
 
         {/* Logo */}
-        <a href="/" className="flex items-center gap-3">
+        <a href="/" className="flex items-center gap-2.5 min-w-0">
           <img
             src="/images/profile-icon.png"
             alt="Stappen In Hengelo logo"
-            width={40}
-            height={40}
-            className="rounded-full"
+            width={34}
+            height={34}
+            className="rounded-full flex-shrink-0"
           />
           <span
-            className="text-xl font-black uppercase tracking-tight leading-none hidden sm:block"
+            className="text-base md:text-xl font-black uppercase tracking-tight leading-none"
             style={{ fontFamily: "'Big Shoulders Display', sans-serif", color: '#fff' }}
           >
             STAPPEN IN{' '}
