@@ -299,13 +299,12 @@ function DrankIndicator({ filterDrank, venues }) {
   const min = Math.min(...prijzen);
   const max = Math.max(...prijzen);
   const avg = prijzen.reduce((a, b) => a + b, 0) / prijzen.length;
-  const kleur = avg <= (min + (max - min) * 0.33) ? '#22c55e' : avg >= (min + (max - min) * 0.66) ? '#ef4444' : '#F27A00';
   return (
-    <div className="flex items-center gap-3 px-4 py-2 rounded-xl border" style={{ borderColor: kleur + '40', backgroundColor: kleur + '10' }}>
+    <div className="flex items-center gap-3 px-4 py-2 rounded-xl border border-[#2a2a2a] bg-[#141414]">
       <span className="text-3xl">{drankEmoji[filterDrank]}</span>
       <div>
         <p className="text-xs text-gray-500 uppercase tracking-wide">Gemiddelde prijs {filterDrank}</p>
-        <p className="font-black text-xl" style={{ color: kleur, fontFamily: "'Big Shoulders Display', sans-serif" }}>
+        <p className="font-black text-xl text-white" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
           €{avg.toFixed(2).replace('.', ',')}
         </p>
       </div>
