@@ -366,8 +366,10 @@ export default function GoogleVenueMap({
     const avg = alleGemiddeldes.reduce((a, b) => a + b, 0) / alleGemiddeldes.length;
     const spread = (Math.max(...alleGemiddeldes) - Math.min(...alleGemiddeldes)) || 1;
     bierprijzen.forEach(v => {
+      const heeftEigenPrijzen = (v.dranken || []).length > 0;
       const prijs = gemiddeldePrijs(v.dranken, drankFilter, globaleFallback);
-      prijzenMap[v.slug] = { prijs, kleur: pinKleur(prijs, avg, spread), dranken: v.dranken };
+      const kleur = heeftEigenPrijzen ? pinKleur(prijs, avg, spread) : '#555555';
+      prijzenMap[v.slug] = { prijs, kleur, dranken: v.dranken };
     });
   }
 
