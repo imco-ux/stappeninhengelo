@@ -14,8 +14,16 @@ const TYPES = [
   'Cafetaria','Döner / Shoarma','Snackbar','Friettent','Pizzeria','Burger','Sushi / Aziatisch','Eetcafé',
 ];
 
-const DAGEN = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
-const leegTijden = () => Object.fromEntries(DAGEN.map(d => [d, { open: '', sluit: '', gesloten: false }]));
+const DAGEN = [
+  { key: 'Ma', label: 'Maandag' },
+  { key: 'Di', label: 'Dinsdag' },
+  { key: 'Wo', label: 'Woensdag' },
+  { key: 'Do', label: 'Donderdag' },
+  { key: 'Vr', label: 'Vrijdag' },
+  { key: 'Za', label: 'Zaterdag' },
+  { key: 'Zo', label: 'Zondag' },
+];
+const leegTijden = () => Object.fromEntries(DAGEN.map(d => [d.key, { open: '', sluit: '', gesloten: false }]));
 
 const leegForm = {
   naam: '', type: 'Café', adres: '', lat: null, lng: null,
@@ -53,10 +61,10 @@ export default function AdminLocaties() {
   function bewerk(v) {
     const basisTijden = leegTijden();
     const opTijden = v.openingstijden || {};
-    const tijden = Object.fromEntries(DAGEN.map(d => [d, {
-      open: opTijden[d]?.open || '',
-      sluit: opTijden[d]?.sluit || '',
-      gesloten: opTijden[d]?.gesloten || false,
+    const tijden = Object.fromEntries(DAGEN.map(d => [d.key, {
+      open: opTijden[d.key]?.open || '',
+      sluit: opTijden[d.key]?.sluit || '',
+      gesloten: opTijden[d.key]?.gesloten || false,
     }]));
     setForm({
       naam: v.naam || '', type: v.type || 'Café', adres: v.adres || '',
@@ -380,23 +388,23 @@ export default function AdminLocaties() {
                 <div className="col-span-2">
                   <label className="text-xs font-bold uppercase text-gray-500 block mb-2">Openingstijden</label>
                   <div className="space-y-2">
-                    {DAGEN.map(dag => {
-                      const t = form.openingstijden?.[dag] || { open: '', sluit: '', gesloten: false };
+                    {DAGEN.map(({ key, label }) => {
+                      const t = form.openingstijden?.[key] || { open: '', sluit: '', gesloten: false };
                       return (
-                        <div key={dag} className="flex items-center gap-3">
-                          <span className="text-xs text-gray-500 w-20 flex-shrink-0">{dag}</span>
+                        <div key={key} className="flex items-center gap-3">
+                          <span className="text-xs text-gray-500 w-20 flex-shrink-0">{label}</span>
                           <input type="checkbox" checked={!!t.gesloten}
-                            onChange={e => upd('openingstijden', { ...form.openingstijden, [dag]: { ...t, gesloten: e.target.checked } })}
+                            onChange={e => upd('openingstijden', { ...form.openingstijden, [key]: { ...t, gesloten: e.target.checked } })}
                             className="accent-oranje" />
                           <span className="text-xs text-gray-600 w-14">Gesloten</span>
                           {!t.gesloten && (
                             <>
                               <input type="time" value={t.open || ''}
-                                onChange={e => upd('openingstijden', { ...form.openingstijden, [dag]: { ...t, open: e.target.value } })}
+                                onChange={e => upd('openingstijden', { ...form.openingstijden, [key]: { ...t, open: e.target.value } })}
                                 className="bg-[#0d0d0d] border border-[#2a2a2a] rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-oranje" />
                               <span className="text-gray-600 text-xs">–</span>
                               <input type="time" value={t.sluit || ''}
-                                onChange={e => upd('openingstijden', { ...form.openingstijden, [dag]: { ...t, sluit: e.target.value } })}
+                                onChange={e => upd('openingstijden', { ...form.openingstijden, [key]: { ...t, sluit: e.target.value } })}
                                 className="bg-[#0d0d0d] border border-[#2a2a2a] rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-oranje" />
                             </>
                           )}
