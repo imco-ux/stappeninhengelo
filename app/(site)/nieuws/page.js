@@ -59,7 +59,7 @@ function ArtikelModal({ item, onSluit }) {
 
         {/* Foto */}
         {item.foto && (
-          <div className="w-full flex-shrink-0 overflow-hidden" style={{ height: 220 }}>
+          <div className="w-full flex-shrink-0 overflow-hidden" style={{ aspectRatio: '4/5' }}>
             <img src={item.foto} alt={item.titel} className="w-full h-full object-cover" />
           </div>
         )}
@@ -214,7 +214,7 @@ export default function NieuwsPage() {
                   {handmatig.map(item => (
                     <button key={item.id} onClick={() => setActief(item)}
                       className="text-left bg-[#141414] rounded-xl border border-[#252525] hover:border-oranje transition-colors overflow-hidden group flex flex-col w-full">
-                      <div className="relative overflow-hidden border-b border-[#1e1e1e]" style={{ height: 180 }}>
+                      <div className="relative overflow-hidden border-b border-[#1e1e1e]" style={{ aspectRatio: '4/5' }}>
                         {item.foto ? (
                           <img src={item.foto} alt={item.titel} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         ) : (

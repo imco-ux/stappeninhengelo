@@ -145,6 +145,7 @@ export default function AdminEvents() {
     grens.setDate(grens.getDate() - 21);
     const { data } = await supabase.from('events').select('*')
       .gte('datum', grens.toISOString().slice(0, 10))
+      .is('centrumbreed_id', null)
       .order('datum', { ascending: true });
     setEvents(data || []);
     setLaden(false);

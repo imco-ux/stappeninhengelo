@@ -40,7 +40,10 @@ export default function Footer() {
 
       <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-[#111] flex items-center justify-between text-xs text-gray-700">
         <span>© {new Date().getFullYear()} Stappen In Hengelo · stappeninhengelo.nl</span>
-        <a href="/dashboard" className="text-gray-700 hover:text-gray-500 transition-colors">Dashboard</a>
+        <div className="flex gap-4">
+          <a href="/algemene-voorwaarden" className="text-gray-700 hover:text-gray-500 transition-colors">Algemene voorwaarden</a>
+          <a href="/dashboard" className="text-gray-700 hover:text-gray-500 transition-colors">Dashboard</a>
+        </div>
       </div>
     </footer>
   );

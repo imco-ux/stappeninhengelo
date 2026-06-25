@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 const OPSLAG_KEY = 'install_banner_gesloten';
-const WACHT_MS = 10000; // 10 seconden
+const WACHT_MS = 8000;
 
 export default function InstallBanner() {
   const [zichtbaar, setZichtbaar] = useState(false);

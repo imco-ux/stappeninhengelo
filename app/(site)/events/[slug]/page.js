@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Script from 'next/script';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -70,6 +70,7 @@ function KnoppenRij({ event, shareText }) {
 
 export default function EventDetailPage() {
   const { slug } = useParams();
+  const router = useRouter();
   const [event, setEvent] = useState(null);
   const [subEvents, setSubEvents] = useState([]);
   const [laden, setLaden] = useState(true);
@@ -98,7 +99,7 @@ export default function EventDetailPage() {
     <main className="min-h-screen bg-black"><Header />
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <p className="text-2xl font-black uppercase text-white" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>Event niet gevonden</p>
-        <a href="/agenda" className="text-oranje text-sm mt-4 inline-block hover:underline">← Terug naar agenda</a>
+        <button onClick={() => router.back()} className="text-oranje text-sm mt-4 inline-block hover:underline">← Terug</button>
       </div>
     <Footer /></main>
   );
@@ -177,7 +178,7 @@ export default function EventDetailPage() {
         )}
 
         <div className="max-w-5xl mx-auto px-4 py-8">
-          <a href="/agenda" className="text-gray-500 text-xs uppercase tracking-wide hover:text-oranje transition-colors mb-8 inline-block">
+          <button onClick={() => router.back()} className="text-gray-500 text-xs uppercase tracking-wide hover:text-oranje transition-colors mb-8 inline-block">
             ← Terug naar agenda
           </a>
 
@@ -316,9 +317,9 @@ export default function EventDetailPage() {
       {pixels}
 
       <div className="max-w-2xl mx-auto px-4 py-10">
-        <a href="/agenda" className="text-gray-500 text-xs uppercase tracking-wide hover:text-oranje transition-colors mb-6 inline-block">
-          ← Terug naar agenda
-        </a>
+        <button onClick={() => router.back()} className="text-gray-500 text-xs uppercase tracking-wide hover:text-oranje transition-colors mb-6 inline-block">
+          ← Terug
+        </button>
 
         <div className="w-full flex items-center justify-center bg-[#0d0d0d] rounded-2xl border-2 border-[#F27A00]/30 mb-6 overflow-hidden" style={{ height: '260px' }}>
           {event.poster_url ? (
