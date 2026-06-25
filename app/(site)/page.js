@@ -149,7 +149,7 @@ export default function Home() {
     ]).then(([evRes, veRes, niRes]) => {
       const venueMap = {};
       for (const v of (veRes.data || [])) venueMap[v.naam] = v;
-      setEvents((evRes.data || []).map(e => {
+      setEvents((evRes.data || []).filter(e => !e.centrumbreed_id).map(e => {
         const v = venueMap[e.venue_naam] || null;
         return {
           ...e, _id: e.id, dag: dagNaam(e.datum),
@@ -193,20 +193,15 @@ export default function Home() {
     setZoekResultaten([...evResults, ...locResults]);
   }, [zoek, events, locaties]);
 
-  const dagVolgorde = useMemo(() => [...new Set(events.map(e => e.dag))].sort((a, b) => {
-    const da = events.find(e => e.dag === a)?.datum || '';
-    const db = events.find(e => e.dag === b)?.datum || '';
-    return da.localeCompare(db);
-  }), [events]);
-
   const groepen = useMemo(() => {
     const g = {};
-    for (const dag of dagVolgorde) {
-      const dagEvents = events.filter(e => e.dag === dag);
-      if (dagEvents.length > 0) g[dag] = dagEvents;
+    for (const e of events) {
+      if (!e.datum) continue;
+      if (!g[e.datum]) g[e.datum] = [];
+      g[e.datum].push(e);
     }
     return g;
-  }, [events, dagVolgorde]);
+  }, [events]);
 
   const groepenEntries = Object.entries(groepen);
 
@@ -345,15 +340,15 @@ export default function Home() {
       {/* ── Events per dag ── */}
       <section className="px-4 py-10 bg-black">
         <div className="max-w-6xl mx-auto space-y-12">
-          {groepenEntries.map(([dag, dagEvents]) => (
-            <div key={dag}>
+          {groepenEntries.map(([datum, dagEvents]) => (
+            <div key={datum}>
               {/* Dag header */}
               <div className="flex items-center gap-4 mb-5">
                 <span
                   className="px-4 py-1 rounded-full text-sm font-black uppercase text-black"
                   style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}
                 >
-                  {dag}
+                  {dagEvents[0]?.dag}
                 </span>
                 <span className="text-gray-600 text-xs">{dagEvents[0]?.datumLabel}</span>
                 <div className="flex-1 h-px bg-[#1e1e1e]" />

@@ -64,7 +64,7 @@ export default function LocatieDetailPage() {
       setLoc(gevonden);
 
       const vandaag = new Date().toISOString().slice(0, 10);
-      const [evRes, prijsById, prijsByNaam, actiesRes] = await Promise.all([
+      const [evRes, prijsById, prijsByNaam, actiesRes, centrumRes] = await Promise.all([
         supabase.from('events').select('*').eq('goedgekeurd', true)
           .gte('datum', vandaag)
           .order('datum', { ascending: true }),
@@ -76,18 +76,30 @@ export default function LocatieDetailPage() {
           .or(`onbepaalde_tijd.eq.true,geldig_tot.gte.${vandaag}`)
           .order('hot', { ascending: false })
           .order('geldig_tot', { ascending: true, nullsLast: true }),
+        supabase.from('events').select('*').eq('goedgekeurd', true).eq('is_centrumbreed', true).gte('datum', vandaag).order('datum'),
       ]);
 
       const allePrijzen = [...(prijsById.data || []), ...(prijsByNaam.data || [])];
       const uniekePrijzen = allePrijzen.filter((p, i, arr) => arr.findIndex(x => x.id === p.id) === i);
 
       const locEvents = (evRes.data || []).filter(e => {
-        // Primair op venue_naam matchen
         if (e.venue_naam) return e.venue_naam === gevonden.naam;
-        // Alleen eigenaar_id als fallback als event geen venue_naam heeft
         return e.eigenaar_id === gevonden.eigenaar_id;
       });
-      setEvents(locEvents);
+
+      // Voeg centrumbreede events toe waar deze zaak in deelnemende_venues staat
+      const centrumVoorLocatie = (centrumRes.data || []).filter(ce => {
+        const deelnemers = ce.extra_info?.deelnemende_venues || [];
+        return deelnemers.includes(gevonden.naam);
+      });
+
+      // Merge en sorteer op datum, vermijd dubbelen
+      const alleEvents = [...locEvents];
+      for (const ce of centrumVoorLocatie) {
+        if (!alleEvents.find(e => e.id === ce.id)) alleEvents.push(ce);
+      }
+      alleEvents.sort((a, b) => (a.datum || '').localeCompare(b.datum || ''));
+      setEvents(alleEvents);
       setPrijzen(uniekePrijzen);
       setActies(actiesRes.data || []);
       setLaden(false);
@@ -463,23 +475,29 @@ export default function LocatieDetailPage() {
             <p className="text-gray-600">Geen aankomende events gevonden.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {events.map(ev => (
-                <div key={ev.id} className="bg-[#141414] rounded-xl border border-[#252525] overflow-hidden">
-                  {ev.poster_url && (
-                    <img src={ev.poster_url} alt={ev.title} className="w-full object-cover" style={{ height: 140 }} />
-                  )}
-                  <div className="p-4">
-                    <p className="font-black uppercase text-lg leading-tight" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>{ev.title}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {ev.datum ? `${new Date(ev.datum).getDate()} ${MAANDEN[new Date(ev.datum).getMonth()]}` : ''} · {ev.tijd}
-                    </p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-gray-500">{ev.leeftijd}</span>
-                      <span className={`text-sm font-bold ${ev.prijs === 'Gratis' ? 'text-green-400' : 'text-oranje'}`}>{ev.prijs}</span>
+              {events.map(ev => {
+                const d = ev.datum ? new Date(ev.datum + 'T12:00:00') : null;
+                const datumStr = d ? `${d.getDate()} ${MAANDEN[d.getMonth()]}` : '';
+                return (
+                  <a key={ev.id} href={`/events/${ev.slug}`}
+                    className={`bg-[#141414] rounded-xl border overflow-hidden block hover:border-oranje transition-colors ${ev.is_centrumbreed ? 'border-oranje/30' : 'border-[#252525]'}`}>
+                    {ev.poster_url && (
+                      <img src={ev.poster_url} alt={ev.title} className="w-full object-cover" style={{ height: 140 }} />
+                    )}
+                    <div className="p-4">
+                      {ev.is_centrumbreed && (
+                        <span className="inline-block mb-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-oranje/30 text-oranje bg-oranje/10">🏙️ Centrumbreed</span>
+                      )}
+                      <p className="font-black uppercase text-lg leading-tight" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>{ev.title}</p>
+                      <p className="text-xs text-gray-500 mt-1">{datumStr} · {ev.tijd}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-gray-500">{ev.leeftijd}</span>
+                        <span className={`text-sm font-bold ${ev.prijs === 'Gratis' ? 'text-green-400' : 'text-oranje'}`}>{ev.prijs}</span>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  </a>
+                );
+              })}
             </div>
           )}
         </div>
