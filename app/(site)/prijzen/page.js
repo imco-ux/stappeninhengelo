@@ -355,10 +355,24 @@ export default function PrijzenPage() {
 
   const alleTypes = useMemo(() => ['Alle', ...new Set(venues.map(v => v.type))], [venues]);
 
+  // Globaal gemiddelde per dranksoort over alle venues — fallback voor ontbrekende prijzen
+  const globalGemiddelde = useMemo(() => Object.fromEntries(
+    alleDranken.filter(d => d !== 'Alle').map(d => {
+      const prijzen = venues.flatMap(v => v.dranken).filter(dr => dr.naam === d).map(dr => dr.prijs);
+      return [d, prijzen.length ? prijzen.reduce((a, b) => a + b, 0) / prijzen.length : null];
+    })
+  ), [venues]);
+
+  // Effectieve prijs per venue per dranksoort (eigen prijs of globaal gemiddelde als fallback)
+  const effectievePrijs = (v, drankNaam) => {
+    const eigen = v.dranken.find(d => d.naam === drankNaam)?.prijs;
+    return eigen ?? globalGemiddelde[drankNaam] ?? null;
+  };
+
   const goedkoopste = useMemo(() => Object.fromEntries(
     alleDranken.filter(d => d !== 'Alle').map(d => {
-      const prijzen = venues.map(v => v.dranken.find(dr => dr.naam === d)?.prijs).filter(Boolean);
-      return [d, Math.min(...prijzen, Infinity)];
+      const prijzen = venues.map(v => v.dranken.find(dr => dr.naam === d)?.prijs).filter(p => p != null);
+      return [d, prijzen.length ? Math.min(...prijzen) : Infinity];
     })
   ), [venues]);
 
@@ -367,15 +381,16 @@ export default function PrijzenPage() {
     vs = [...vs].sort((a, b) => {
       if (sorteer === 'az') return a.naam.localeCompare(b.naam);
       const getPrijs = (v) => {
-        if (filterDrank !== 'Alle') return v.dranken.find(d => d.naam === filterDrank)?.prijs ?? Infinity;
-        const prijzen = v.dranken.map(d => d.prijs);
+        if (filterDrank !== 'Alle') return effectievePrijs(v, filterDrank) ?? Infinity;
+        const categorieen = alleDranken.filter(d => d !== 'Alle');
+        const prijzen = categorieen.map(d => effectievePrijs(v, d)).filter(p => p != null);
         return prijzen.length ? prijzen.reduce((s, p) => s + p, 0) / prijzen.length : Infinity;
       };
       const pa = getPrijs(a), pb = getPrijs(b);
       return sorteer === 'prijs-desc' ? pb - pa : pa - pb;
     });
     return vs;
-  }, [venues, filterDrank, filterType, sorteer]);
+  }, [venues, filterDrank, filterType, sorteer, globalGemiddelde]);
 
   const getoondDranken = alleDranken.filter(d => d !== 'Alle' && (filterDrank === 'Alle' || d === filterDrank));
 
