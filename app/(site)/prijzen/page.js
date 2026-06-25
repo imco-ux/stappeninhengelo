@@ -533,11 +533,10 @@ export default function PrijzenPage() {
                         {getoondDranken.map(d => {
                           const item = venue.dranken.find(dr => dr.naam === d);
                           const isGoedkoopst = item && item.prijs === goedkoopste[d];
-                          const prijsKleur = !item ? '#555' : item.prijs <= 2.5 ? '#22c55e' : item.prijs <= 4 ? '#F27A00' : '#ef4444';
                           return (
                             <td key={d} className="py-5 px-4 text-center">
                               <div className="flex flex-col items-center gap-1">
-                                <span className="text-base font-bold" style={{ color: prijsKleur }}>
+                                <span className={`text-base font-bold ${isGoedkoopst ? 'text-green-400' : item ? 'text-white' : 'text-gray-700'}`}>
                                   {item ? `€${item.prijs.toFixed(2).replace('.', ',')}` : '✕'}
                                 </span>
                                 {isGoedkoopst && (
@@ -590,7 +589,7 @@ export default function PrijzenPage() {
                               <span className="text-gray-400 text-sm">{drankNaam}</span>
                               <div className="flex items-center gap-2">
                                 {isGoedkoopst && <span className="text-[10px] bg-green-400/10 text-green-400 border border-green-400/30 px-1.5 py-0.5 rounded-full font-bold">✓ Goedkoopst</span>}
-                                <span className="font-bold text-sm" style={{ color: !d ? '#555' : d.prijs <= 2.5 ? '#22c55e' : d.prijs <= 4 ? '#F27A00' : '#ef4444' }}>
+                                <span className={`font-bold text-sm ${isGoedkoopst ? 'text-green-400' : d ? 'text-white' : 'text-gray-700'}`}>
                                   {d ? `€${d.prijs.toFixed(2).replace('.', ',')}` : '✕'}
                                 </span>
                               </div>

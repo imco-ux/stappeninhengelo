@@ -50,6 +50,7 @@ export default function LocatieDetailPage() {
   const [loc, setLoc]       = useState(null);
   const [events, setEvents] = useState([]);
   const [prijzen, setPrijzen] = useState([]);
+  const [stadGemiddeld, setStadGemiddeld] = useState({});
   const [acties, setActies] = useState([]);
   const [laden, setLaden]   = useState(true);
   const [actieveFoto, setActieveFoto] = useState(0);
@@ -64,7 +65,7 @@ export default function LocatieDetailPage() {
       setLoc(gevonden);
 
       const vandaag = new Date().toISOString().slice(0, 10);
-      const [evRes, prijsById, prijsByNaam, actiesRes, centrumRes] = await Promise.all([
+      const [evRes, prijsById, prijsByNaam, actiesRes, centrumRes, allePrijsRes] = await Promise.all([
         supabase.from('events').select('*').eq('goedgekeurd', true)
           .gte('datum', vandaag)
           .order('datum', { ascending: true }),
@@ -77,6 +78,7 @@ export default function LocatieDetailPage() {
           .order('hot', { ascending: false })
           .order('geldig_tot', { ascending: true, nullsLast: true }),
         supabase.from('events').select('*').eq('goedgekeurd', true).eq('is_centrumbreed', true).gte('datum', vandaag).order('datum'),
+        supabase.from('bierprijzen').select('drankje, prijs'),
       ]);
 
       const allePrijzen = [...(prijsById.data || []), ...(prijsByNaam.data || [])];
@@ -101,6 +103,20 @@ export default function LocatieDetailPage() {
       alleEvents.sort((a, b) => (a.datum || '').localeCompare(b.datum || ''));
       setEvents(alleEvents);
       setPrijzen(uniekePrijzen);
+
+      // Bereken stadgemiddelde per drankje
+      const groepen = {};
+      for (const p of (allePrijsRes.data || [])) {
+        if (!p.drankje || !p.prijs) continue;
+        if (!groepen[p.drankje]) groepen[p.drankje] = [];
+        groepen[p.drankje].push(parseFloat(p.prijs));
+      }
+      const gemiddeld = {};
+      for (const [drankje, lijstje] of Object.entries(groepen)) {
+        gemiddeld[drankje] = lijstje.reduce((s, v) => s + v, 0) / lijstje.length;
+      }
+      setStadGemiddeld(gemiddeld);
+
       setActies(actiesRes.data || []);
       setLaden(false);
     }
@@ -381,7 +397,11 @@ export default function LocatieDetailPage() {
                 .sort((a, b) => (a.drankje || '').localeCompare(b.drankje || ''))
                 .map((p, i) => {
                   const prijs = parseFloat(p.prijs);
-                  const kleur = prijs <= 2.5 ? '#22c55e' : prijs <= 4 ? '#F27A00' : '#ef4444';
+                  const gem = stadGemiddeld[p.drankje];
+                  const kleur = !gem ? '#F27A00'
+                    : prijs <= gem * 0.9 ? '#22c55e'   // >10% goedkoper dan gemiddelde → groen
+                    : prijs <= gem * 1.1 ? '#F27A00'   // binnen 10% van gemiddelde → oranje
+                    : '#ef4444';                        // >10% duurder dan gemiddelde → rood
                   const emoji = {
                     Bier: '🍺', Wijn: '🍷', Mixdrank: '🍹', Shot: '🥃',
                     Frisdrank: '🥤', 'Hard Seltzer': '🫧',
