@@ -110,14 +110,12 @@ function BonScanner() {
               {fase === 'kies' && (
                 <div>
                   <p className="text-gray-500 text-sm mb-5 text-center">Maak een foto van een bon of prijslijst — de AI leest drankprijzen en locatie automatisch uit.</p>
-                  <input ref={inputRef} type="file" accept="image/*" onChange={handleBestand} className="hidden" />
-                  <button onClick={() => inputRef.current?.click()}
-                    className="w-full py-4 rounded-2xl font-black uppercase text-base text-black flex items-center justify-center gap-2"
+                  <label className="w-full py-4 rounded-2xl font-black uppercase text-base text-black flex items-center justify-center gap-2 cursor-pointer active:opacity-80"
                     style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}>
                     <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
                     Foto kiezen of maken
-                  </button>
-                  <p className="text-gray-600 text-xs text-center mt-3">iOS toont automatisch camera of bibliotheek</p>
+                    <input type="file" accept="image/*" onChange={handleBestand} className="hidden" />
+                  </label>
                 </div>
               )}
 
