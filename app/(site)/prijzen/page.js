@@ -83,7 +83,7 @@ function BonScanner() {
         <div className="fixed inset-0 z-50 flex items-end justify-center"
           style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)' }}
           onClick={e => { if (e.target === e.currentTarget) sluit(); }}>
-          <div className="w-full max-w-lg rounded-t-3xl border-t border-x border-[#2a2a2a]" style={{ backgroundColor: '#111', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          <div className="w-full max-w-lg rounded-t-3xl border-t border-x border-[#2a2a2a]" style={{ backgroundColor: '#111', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
 
             {/* Trekker */}
             <div className="flex justify-center pt-3 pb-1">
