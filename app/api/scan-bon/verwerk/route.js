@@ -69,15 +69,29 @@ export async function POST(req) {
 NAAM | AANTAL | REGELTOTAAL | LOCATIE
 
 Voorbeeld:
-Speciaalbier wo TAP | 4 | 16.00 | Road House
 Bier Vaasje | 5 | 17.50 | Road House
 Wijn | 4 | 18.00 | Road House
+Gin Tonic | 2 | 15.00 | Road House
 
-Regels:
-- Neem alleen dranken op (bier, wijn, mixdrank, frisdrank, shot, cocktail, hard seltzer)
-- Niet opnemen: eten, koffie, thee, poolen, open bedrag, servicekosten, BTW
+Wat je WEL opneemt (standaard consumpties):
+- Gewoon bier / vaasje / pils / fluitje
+- Wijn (glas)
+- Mixdranken (gin tonic, vodka cola, etc.)
+- Cocktails
+- Hard seltzer (Stëlz, Viper, etc.)
+- Shots
+- Frisdrank
+
+Wat je NIET opneemt (sla deze regels over):
+- Speciaalbieren (speciaalbier, IPA, weizen, bokbier, craft beer)
+- Kannetje, kan, pitcher, fles bier
+- Eten, snacks, koffie, thee
+- Poolen, open bedrag, servicekosten, BTW-regels
+- Wijnfles (alleen glas)
+- Alles met "VERBORGEN" in de naam
+
 - AANTAL = getal uit de "Aantal" kolom van de bon
-- REGELTOTAAL = bedrag uit de "Kosten" of "Bedrag" kolom (het totaal voor die regel, NIET de stukprijs)
+- REGELTOTAAL = bedrag uit de "Kosten" of "Bedrag" kolom (het totaal voor die regel)
 - LOCATIE = naam van het café/bar zoals op de bon
 - Geef ALLEEN de tabel terug, geen uitleg` }
         ]
@@ -113,7 +127,11 @@ Regels:
           categorie = cat; break;
         }
       }
-      if (naamLower.includes('bier') || naamLower.includes('vaasje') || naamLower.includes('pils') || naamLower.includes('speciaal')) categorie = 'Bier';
+      // Sla speciaalbieren, kannetjes en verborgen items over
+      const uitsluitingen = ['speciaal', 'ipa', 'weizen', 'bokbier', 'kannetje', 'kan ', 'pitcher', 'fles', 'verborgen', 'craft'];
+      if (uitsluitingen.some(u => naamLower.includes(u))) continue;
+
+      if ((naamLower.includes('bier') || naamLower.includes('vaasje') || naamLower.includes('pils') || naamLower.includes('fluitje')) && !naamLower.includes('speciaal')) categorie = 'Bier';
       if (naamLower.includes('wijn') || naamLower.includes('rosé')) categorie = 'Wijn';
       if (naamLower.includes('mix') && naamLower.includes('frisdrank')) categorie = 'Frisdrank';
       if (naamLower.includes('mixdrank')) categorie = 'Mixdrank';
