@@ -381,10 +381,13 @@ export default function PrijzenPage() {
     vs = [...vs].sort((a, b) => {
       if (sorteer === 'az') return a.naam.localeCompare(b.naam);
       const getPrijs = (v) => {
-        if (filterDrank !== 'Alle') return effectievePrijs(v, filterDrank) ?? Infinity;
-        const categorieen = alleDranken.filter(d => d !== 'Alle');
-        const prijzen = categorieen.map(d => effectievePrijs(v, d)).filter(p => p != null);
-        return prijzen.length ? prijzen.reduce((s, p) => s + p, 0) / prijzen.length : Infinity;
+        if (filterDrank !== 'Alle') {
+          // Alleen eigen prijs telt voor sortering — geen fallback
+          return v.dranken.find(d => d.naam === filterDrank)?.prijs ?? Infinity;
+        }
+        // Gemiddelde van alleen eigen prijzen — venues zonder prijzen zakken naar beneden
+        const eigenPrijzen = v.dranken.map(d => d.prijs).filter(p => p != null);
+        return eigenPrijzen.length ? eigenPrijzen.reduce((s, p) => s + p, 0) / eigenPrijzen.length : Infinity;
       };
       const pa = getPrijs(a), pb = getPrijs(b);
       return sorteer === 'prijs-desc' ? pb - pa : pa - pb;
