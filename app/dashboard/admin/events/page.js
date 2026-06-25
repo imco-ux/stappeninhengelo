@@ -273,8 +273,10 @@ export default function AdminEvents() {
   }
 
   async function toggleGoedkeuring(ev) {
-    await supabase.from('events').update({ goedgekeurd: !ev.goedgekeurd }).eq('id', ev.id);
+    const { error } = await supabase.from('events').update({ goedgekeurd: !ev.goedgekeurd }).eq('id', ev.id);
+    if (error) { toonMelding('❌ ' + error.message); return; }
     setEvents(evs => evs.map(e => e.id === ev.id ? { ...e, goedgekeurd: !e.goedgekeurd } : e));
+    toonMelding(!ev.goedgekeurd ? '✓ Event gepubliceerd' : 'Event verborgen');
   }
 
   function toonMelding(t) { setMelding(t); setTimeout(() => setMelding(''), 4000); }
