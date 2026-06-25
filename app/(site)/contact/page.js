@@ -75,7 +75,7 @@ export default function ContactPage() {
             <form onSubmit={verstuur} className="space-y-4">
               {status === 'fout' && (
                 <div className="rounded-xl bg-red-950/30 border border-red-800/40 px-4 py-3 text-red-400 text-sm">
-                  Er ging iets mis. Probeer het opnieuw of mail direct naar <a href="mailto:imco@viosevents.nl" className="underline">imco@viosevents.nl</a>
+                  Er ging iets mis. Probeer het opnieuw.
                 </div>
               )}
 
@@ -114,9 +114,6 @@ export default function ContactPage() {
                 {bezig ? 'Versturen...' : 'Verstuur bericht →'}
               </button>
 
-              <p className="text-gray-600 text-xs text-center">
-                Of mail direct naar <a href="mailto:imco@viosevents.nl" className="text-oranje hover:underline">imco@viosevents.nl</a>
-              </p>
             </form>
           )}
         </div>

@@ -38,8 +38,9 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-[#111] text-center text-xs text-gray-700">
-        © {new Date().getFullYear()} Stappen In Hengelo · stappeninhengelo.nl
+      <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-[#111] flex items-center justify-between text-xs text-gray-700">
+        <span>© {new Date().getFullYear()} Stappen In Hengelo · stappeninhengelo.nl</span>
+        <a href="/dashboard" className="text-gray-700 hover:text-gray-500 transition-colors">Dashboard</a>
       </div>
     </footer>
   );

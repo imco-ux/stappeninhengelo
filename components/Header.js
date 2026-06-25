@@ -73,10 +73,7 @@ export default function Header() {
             {navLinks.map((l) => (
               <a key={l.href} href={l.href} className="text-sm font-semibold text-gray-400 hover:text-white transition-colors uppercase tracking-wide">{l.label}</a>
             ))}
-            <a href="/event-aanmelden" className="text-sm font-bold uppercase tracking-wide px-4 py-2 rounded" style={{ backgroundColor: '#F27A00', color: '#000' }}>
-              + Event aanmelden
-            </a>
-          </nav>
+            </nav>
 
           {/* Rechts: zoek + hamburger (mobiel) */}
           <div className="flex items-center gap-3">
@@ -102,9 +99,6 @@ export default function Header() {
             {navLinks.map((l) => (
               <a key={l.href} href={l.href} className="text-sm font-semibold text-gray-300 uppercase tracking-wide py-2" onClick={() => setOpen(false)}>{l.label}</a>
             ))}
-            <a href="/event-aanmelden" className="text-sm font-bold uppercase tracking-wide px-4 py-3 rounded text-center mt-2" style={{ backgroundColor: '#F27A00', color: '#000' }}>
-              + Event aanmelden
-            </a>
           </div>
         )}
       </header>

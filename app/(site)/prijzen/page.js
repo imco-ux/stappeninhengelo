@@ -1,10 +1,53 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
+
+function BonScanner() {
+  const [status, setStatus] = useState(null); // null | 'bezig' | 'ok' | 'fout'
+  const inputRef = useRef(null);
+
+  async function handleBestand(e) {
+    const bestand = e.target.files?.[0];
+    if (!bestand) return;
+    setStatus('bezig');
+    const fd = new FormData();
+    fd.append('bon', bestand);
+    try {
+      const res = await fetch('/api/scan-bon', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setStatus('ok');
+      setTimeout(() => setStatus(null), 4000);
+    } catch {
+      setStatus('fout');
+      setTimeout(() => setStatus(null), 4000);
+    }
+    e.target.value = '';
+  }
+
+  return (
+    <>
+      <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleBestand} className="hidden" />
+      <button onClick={() => inputRef.current?.click()} disabled={status === 'bezig'}
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-oranje/40 text-oranje text-sm font-bold hover:bg-oranje/10 transition-colors disabled:opacity-50 flex-shrink-0 mt-1"
+        style={{ backgroundColor: 'rgba(242,122,0,0.08)' }}>
+        {status === 'bezig' ? (
+          <><div className="w-4 h-4 border-2 border-oranje border-t-transparent rounded-full animate-spin" /> Scannen...</>
+        ) : status === 'ok' ? (
+          <><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Verstuurd!</>
+        ) : status === 'fout' ? (
+          <>❌ Fout</>
+        ) : (
+          <><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Scan bon</>
+        )}
+      </button>
+    </>
+  );
+}
 
 const GoogleVenueMap = dynamic(() => import('@/components/GoogleVenueMap'), { ssr: false });
 
@@ -108,9 +151,14 @@ export default function PrijzenPage() {
 
       <section className="py-10 px-4 border-b border-[#1a1a1a]" style={{ background: 'linear-gradient(180deg, #1a0800 0%, #000 100%)' }}>
         <div className="max-w-6xl mx-auto">
-          <p className="text-oranje text-xs font-bold uppercase tracking-widest mb-1">Stappen In Hengelo</p>
-          <h1 className="text-5xl font-black uppercase leading-none" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>PRIJZEN RADAR</h1>
-          <p className="text-gray-500 text-sm mt-1">{laden ? 'Laden...' : `${venues.length} locaties`}</p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-oranje text-xs font-bold uppercase tracking-widest mb-1">Stappen In Hengelo</p>
+              <h1 className="text-5xl font-black uppercase leading-none" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>PRIJZEN RADAR</h1>
+              <p className="text-gray-500 text-sm mt-1">{laden ? 'Laden...' : `${venues.length} locaties`}</p>
+            </div>
+            <BonScanner />
+          </div>
         </div>
       </section>
 
