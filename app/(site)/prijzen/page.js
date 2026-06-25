@@ -109,21 +109,15 @@ function BonScanner() {
               {/* Stap: kies foto */}
               {fase === 'kies' && (
                 <div>
-                  <p className="text-gray-500 text-sm mb-5 text-center">Foto van een bon of prijslijst — de AI leest drankprijzen en locatie automatisch uit.</p>
-                  <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleBestand} className="hidden" />
-                  <div className="flex flex-col gap-3">
-                    <button onClick={() => inputRef.current?.click()}
-                      className="w-full py-4 rounded-2xl font-black uppercase text-base text-black flex items-center justify-center gap-2"
-                      style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}>
-                      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                      Camera gebruiken
-                    </button>
-                    <button onClick={() => { if (inputRef.current) { inputRef.current.removeAttribute('capture'); inputRef.current.click(); setTimeout(() => inputRef.current?.setAttribute('capture','environment'), 500); } }}
-                      className="w-full py-3.5 rounded-2xl font-bold text-sm text-gray-300 border border-[#2a2a2a] flex items-center justify-center gap-2 hover:border-oranje hover:text-oranje transition-colors">
-                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                      Uploaden uit bibliotheek
-                    </button>
-                  </div>
+                  <p className="text-gray-500 text-sm mb-5 text-center">Maak een foto van een bon of prijslijst — de AI leest drankprijzen en locatie automatisch uit.</p>
+                  <input ref={inputRef} type="file" accept="image/*" onChange={handleBestand} className="hidden" />
+                  <button onClick={() => inputRef.current?.click()}
+                    className="w-full py-4 rounded-2xl font-black uppercase text-base text-black flex items-center justify-center gap-2"
+                    style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}>
+                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    Foto kiezen of maken
+                  </button>
+                  <p className="text-gray-600 text-xs text-center mt-3">iOS toont automatisch camera of bibliotheek</p>
                 </div>
               )}
 
