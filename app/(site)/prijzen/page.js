@@ -7,44 +7,216 @@ import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 
 function BonScanner() {
-  const [status, setStatus] = useState(null); // null | 'bezig' | 'ok' | 'fout'
+  const [open, setOpen] = useState(false);
+  const [fase, setFase] = useState('kies'); // kies | scannen | resultaat | verstuurd | fout
+  const [preview, setPreview] = useState(null);
+  const [bestand, setBestand] = useState(null);
+  const [resultaat, setResultaat] = useState(null); // { locatie_naam, dranken }
+  const [foutTekst, setFoutTekst] = useState('');
   const inputRef = useRef(null);
 
-  async function handleBestand(e) {
-    const bestand = e.target.files?.[0];
-    if (!bestand) return;
-    setStatus('bezig');
+  function sluit() {
+    setOpen(false);
+    setFase('kies');
+    setPreview(null);
+    setBestand(null);
+    setResultaat(null);
+  }
+
+  function handleBestand(e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setBestand(f);
+    setPreview(URL.createObjectURL(f));
+    setFase('preview');
+    e.target.value = '';
+  }
+
+  async function scannen() {
+    setFase('scannen');
     const fd = new FormData();
     fd.append('bon', bestand);
     try {
       const res = await fetch('/api/scan-bon', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setStatus('ok');
-      setTimeout(() => setStatus(null), 4000);
-    } catch {
-      setStatus('fout');
-      setTimeout(() => setStatus(null), 4000);
+      setResultaat(data.scan);
+      setFase('resultaat');
+    } catch (e) {
+      setFoutTekst(e.message);
+      setFase('fout');
     }
-    e.target.value = '';
+  }
+
+  async function verstuur() {
+    // Resultaat is al opgeslagen door de API, gewoon bevestigen
+    setFase('verstuurd');
+  }
+
+  function updDrank(i, key, val) {
+    setResultaat(r => ({ ...r, dranken: r.dranken.map((d, j) => j === i ? { ...d, [key]: val } : d) }));
+  }
+  function verwijderDrank(i) {
+    setResultaat(r => ({ ...r, dranken: r.dranken.filter((_, j) => j !== i) }));
+  }
+  function voegDrankToe() {
+    setResultaat(r => ({ ...r, dranken: [...r.dranken, { naam: '', prijs: '' }] }));
   }
 
   return (
     <>
-      <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleBestand} className="hidden" />
-      <button onClick={() => inputRef.current?.click()} disabled={status === 'bezig'}
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-oranje/40 text-oranje text-sm font-bold hover:bg-oranje/10 transition-colors disabled:opacity-50 flex-shrink-0 mt-1"
+      <button onClick={() => setOpen(true)}
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-oranje/40 text-oranje text-sm font-bold hover:bg-oranje/10 transition-colors flex-shrink-0 mt-1"
         style={{ backgroundColor: 'rgba(242,122,0,0.08)' }}>
-        {status === 'bezig' ? (
-          <><div className="w-4 h-4 border-2 border-oranje border-t-transparent rounded-full animate-spin" /> Scannen...</>
-        ) : status === 'ok' ? (
-          <><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Verstuurd!</>
-        ) : status === 'fout' ? (
-          <>❌ Fout</>
-        ) : (
-          <><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Scan bon</>
-        )}
+        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Scan bon
       </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)' }}
+          onClick={e => { if (e.target === e.currentTarget) sluit(); }}>
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-[#2a2a2a] overflow-hidden" style={{ backgroundColor: '#111' }}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e]">
+              <p className="font-black uppercase text-sm text-white" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
+                {fase === 'kies' && 'Scan een bon'}
+                {fase === 'preview' && 'Bon bekijken'}
+                {fase === 'scannen' && 'AI analyseert...'}
+                {fase === 'resultaat' && 'Gevonden informatie'}
+                {fase === 'verstuurd' && 'Verstuurd!'}
+                {fase === 'fout' && 'Er ging iets mis'}
+              </p>
+              <button onClick={sluit} className="text-gray-500 hover:text-white">
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <div className="px-5 py-5">
+
+              {/* Stap: kies foto */}
+              {fase === 'kies' && (
+                <div className="text-center py-4">
+                  <p className="text-gray-400 text-sm mb-6">Maak een foto van een bon of prijslijst. De AI leest automatisch de drankprijzen en locatie uit.</p>
+                  <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleBestand} className="hidden" />
+                  <div className="flex flex-col gap-3">
+                    <button onClick={() => inputRef.current?.click()}
+                      className="w-full py-4 rounded-xl font-black uppercase text-sm text-black"
+                      style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}>
+                      📷 Camera gebruiken
+                    </button>
+                    <button onClick={() => { if (inputRef.current) { inputRef.current.removeAttribute('capture'); inputRef.current.click(); setTimeout(() => inputRef.current?.setAttribute('capture','environment'), 500); } }}
+                      className="w-full py-3 rounded-xl font-bold text-sm text-gray-300 border border-[#2a2a2a] hover:border-oranje hover:text-oranje transition-colors">
+                      Foto uploaden uit bibliotheek
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Stap: preview */}
+              {fase === 'preview' && preview && (
+                <div>
+                  <img src={preview} alt="bon" className="w-full max-h-64 object-contain rounded-xl border border-[#2a2a2a] mb-4" />
+                  <div className="flex gap-3">
+                    <button onClick={() => { setFase('kies'); setPreview(null); setBestand(null); }}
+                      className="flex-1 py-3 rounded-xl text-sm text-gray-400 border border-[#2a2a2a] hover:text-white font-bold">
+                      Andere foto
+                    </button>
+                    <button onClick={scannen}
+                      className="flex-1 py-3 rounded-xl font-black uppercase text-sm text-black"
+                      style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}>
+                      Analyseren →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Stap: scannen */}
+              {fase === 'scannen' && (
+                <div className="text-center py-8">
+                  {preview && <img src={preview} alt="bon" className="w-32 h-40 object-cover rounded-xl mx-auto mb-5 opacity-50 border border-[#2a2a2a]" />}
+                  <div className="flex items-center justify-center gap-3 text-oranje mb-2">
+                    <div className="w-5 h-5 border-2 border-oranje border-t-transparent rounded-full animate-spin" />
+                    <span className="font-bold text-sm">AI leest de bon...</span>
+                  </div>
+                  <p className="text-gray-600 text-xs">Dit duurt een paar seconden</p>
+                </div>
+              )}
+
+              {/* Stap: resultaat */}
+              {fase === 'resultaat' && resultaat && (
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                  <div>
+                    <label className="text-xs font-bold uppercase text-gray-500 block mb-1">Locatie</label>
+                    <input value={resultaat.locatie_naam || ''} onChange={e => setResultaat(r => ({ ...r, locatie_naam: e.target.value }))}
+                      placeholder="Naam van het café / bar"
+                      className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-oranje" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase text-gray-500 block mb-2">
+                      Gevonden dranken ({resultaat.dranken?.length || 0})
+                    </label>
+                    <div className="space-y-2">
+                      {(resultaat.dranken || []).map((d, i) => (
+                        <div key={i} className="flex gap-2 items-center">
+                          <input value={d.naam} onChange={e => updDrank(i, 'naam', e.target.value)}
+                            placeholder="Naam drank"
+                            className="flex-1 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-oranje" />
+                          <div className="relative flex-shrink-0">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">€</span>
+                            <input type="number" step="0.01" value={d.prijs} onChange={e => updDrank(i, 'prijs', e.target.value)}
+                              className="w-20 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg pl-6 pr-2 py-2 text-white text-sm focus:outline-none focus:border-oranje" />
+                          </div>
+                          <button onClick={() => verwijderDrank(i)} className="text-gray-600 hover:text-red-400 flex-shrink-0">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={voegDrankToe} className="text-xs text-oranje hover:text-orange-400 mt-2 flex items-center gap-1">
+                      + Drank toevoegen
+                    </button>
+                  </div>
+                  <button onClick={verstuur}
+                    className="w-full py-3.5 rounded-xl font-black uppercase text-sm text-black mt-2"
+                    style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}>
+                    Verstuur naar beheerder →
+                  </button>
+                </div>
+              )}
+
+              {/* Stap: verstuurd */}
+              {fase === 'verstuurd' && (
+                <div className="text-center py-6">
+                  <div className="w-14 h-14 rounded-full bg-green-900/30 flex items-center justify-center mx-auto mb-4">
+                    <svg width="24" height="24" fill="none" stroke="#4ade80" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                  </div>
+                  <p className="text-white font-black text-lg uppercase mb-1" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>Bedankt!</p>
+                  <p className="text-gray-400 text-sm mb-5">De bon is verstuurd. De beheerder keurt de prijzen na en voegt ze toe aan de radar.</p>
+                  <button onClick={sluit} className="px-6 py-2.5 rounded-xl text-sm font-bold text-black" style={{ backgroundColor: '#F27A00' }}>
+                    Sluiten
+                  </button>
+                </div>
+              )}
+
+              {/* Stap: fout */}
+              {fase === 'fout' && (
+                <div className="text-center py-6">
+                  <p className="text-red-400 font-bold mb-2">Er ging iets mis</p>
+                  <p className="text-gray-500 text-xs mb-4">{foutTekst}</p>
+                  <button onClick={() => setFase('kies')} className="px-6 py-2.5 rounded-xl text-sm font-bold text-black" style={{ backgroundColor: '#F27A00' }}>
+                    Opnieuw proberen
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
