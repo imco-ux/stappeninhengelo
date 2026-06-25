@@ -50,8 +50,8 @@ function EventKaart({ event, onClick }) {
   const kleur = typeKleur[event.type] || '#888';
   return (
     <button
-      onClick={() => onClick(event)}
-      className={`w-full text-left bg-[#141414] rounded-xl border group active:scale-[0.98] overflow-hidden ${event.hot ? 'hot-card' : 'border-[#252525] hover:border-oranje transition-all'}`}
+      onClick={() => event.is_centrumbreed ? (window.location.href = `/events/${event.slug}`) : onClick(event)}
+      className={`w-full text-left bg-[#141414] rounded-xl border group active:scale-[0.98] overflow-hidden ${event.hot ? 'hot-card' : 'border-[#252525] hover:border-oranje transition-all'} ${event.is_centrumbreed ? 'border-oranje/30' : ''}`}
     >
       <div className="relative">
         <EventPoster src={event.posterUrl} alt={event.title} leeftijd={event.leeftijd} />
@@ -263,7 +263,7 @@ export default function Home() {
                   <div className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-white/10 overflow-hidden z-50" style={{ backgroundColor: '#111', boxShadow: '0 8px 32px rgba(0,0,0,0.8)' }}>
                     {zoekResultaten.map(({ type, item }) => (
                       type === 'event' ? (
-                        <button key={item.id} onMouseDown={() => { setActief(item); setToonZoek(false); setZoek(''); }}
+                        <button key={item.id} onMouseDown={() => { if (item.is_centrumbreed) { window.location.href = `/events/${item.slug}`; } else { setActief(item); setToonZoek(false); setZoek(''); } }}
                           className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 text-left border-b border-white/5 last:border-0">
                           <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#1a1a1a] flex-shrink-0">
                             {item.posterUrl

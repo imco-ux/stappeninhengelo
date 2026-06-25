@@ -165,8 +165,9 @@ export default function AgendaPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                     {dagEvents.map((event) => {
                       return (
-                        <button key={event._id} onClick={() => setActief(event)}
-                          className={`text-left bg-[#141414] rounded-xl border group active:scale-[0.98] overflow-hidden ${event.hot ? 'hot-card' : 'border-[#252525] hover:border-oranje transition-all'}`}>
+                        <button key={event._id}
+                          onClick={() => event.is_centrumbreed ? (window.location.href = `/events/${event.slug}`) : setActief(event)}
+                          className={`text-left bg-[#141414] rounded-xl border group active:scale-[0.98] overflow-hidden ${event.hot ? 'hot-card' : 'border-[#252525] hover:border-oranje transition-all'} ${event.is_centrumbreed ? 'border-oranje/30' : ''}`}>
                           <div className="relative">
                             <EventPoster src={event.posterUrl} alt={event.title} leeftijd={event.leeftijd} />
                             {event.hot && (
