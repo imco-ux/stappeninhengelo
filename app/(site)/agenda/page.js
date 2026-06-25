@@ -41,6 +41,7 @@ export default function AgendaPage() {
       const [evRes, venRes] = await Promise.all([
         supabase.from('events').select('*').eq('goedgekeurd', true)
           .gte('datum', new Date().toISOString().split('T')[0])
+          .is('centrumbreed_id', null)
           .order('datum', { ascending: true }),
         supabase.from('venues').select('id, naam, logo_url, eigenaar_id'),
       ]);
@@ -49,8 +50,7 @@ export default function AgendaPage() {
         venueMap[v.naam] = v;
         venueMap[v.eigenaar_id] = v;
       }
-      setEvents((evRes.data || []).map(e => {
-        // Only use logo from exact venue_naam match — eigenaar_id fallback caused wrong logos on centrum events
+      setEvents((evRes.data || []).filter(e => !e.centrumbreed_id).map(e => {
         const vByNaam = venueMap[e.venue_naam] || null;
         return {
           ...e,
@@ -67,15 +67,15 @@ export default function AgendaPage() {
     laad();
   }, []);
 
-  const alleDagen = useMemo(() => {
-    const uniek = [...new Map(events.map(e => [e.dag, e.datum])).entries()]
-      .sort((a, b) => a[1].localeCompare(b[1])).map(([dag]) => dag);
+  // Unieke datums (ISO string) gesorteerd — voor de dagfilter-knoppen
+  const alleDatums = useMemo(() => {
+    const uniek = [...new Set(events.map(e => e.datum).filter(Boolean))].sort();
     return ['Alle dagen', ...uniek];
   }, [events]);
 
   const gefilterd = useMemo(() => {
     return events.filter(e => {
-      const dagOk = actieveDag === 'Alle dagen' || e.dag === actieveDag;
+      const dagOk = actieveDag === 'Alle dagen' || e.datum === actieveDag;
       const typeOk = actieveType === 'Alle types' || e.type === actieveType;
       return dagOk && typeOk;
     });
@@ -84,8 +84,8 @@ export default function AgendaPage() {
   const groepenPerDag = useMemo(() => {
     const map = new Map();
     for (const event of gefilterd) {
-      if (!map.has(event.dag)) map.set(event.dag, []);
-      map.get(event.dag).push(event);
+      if (!map.has(event.datum)) map.set(event.datum, []);
+      map.get(event.datum).push(event);
     }
     return [...map.entries()];
   }, [gefilterd]);
@@ -106,15 +106,18 @@ export default function AgendaPage() {
         <div className="max-w-6xl mx-auto space-y-2">
           {/* Dagfilters */}
           <div className="flex gap-2 flex-wrap">
-            {alleDagen.map((d) => {
-              const event = d !== 'Alle dagen' ? events.find(e => e.dag === d) : null;
+            {alleDatums.map((d) => {
+              const ev = d !== 'Alle dagen' ? events.find(e => e.datum === d) : null;
+              const MN = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+              const label = d === 'Alle dagen' ? 'Alle dagen' : ev?.dag || dagNaam(d);
+              const datStr = d !== 'Alle dagen' ? (() => { const dt = new Date(d + 'T12:00:00'); return `${dt.getDate()} ${MN[dt.getMonth()]}`; })() : null;
               return (
                 <button key={d} onClick={() => setActieveDag(d)}
                   className={`text-xs font-bold uppercase tracking-wide px-4 py-1.5 rounded-full border transition-colors ${actieveDag === d ? 'bg-oranje border-oranje text-black' : 'border-[#333] text-gray-400 hover:border-oranje hover:text-oranje'}`}>
-                  {d}
-                  {event && (
+                  {label}
+                  {datStr && (
                     <span className={`ml-1 ${actieveDag === d ? 'text-black/60' : 'text-gray-600'} font-normal normal-case`}>
-                      {new Date(event.datum + 'T12:00:00').getDate()} {['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'][new Date(event.datum + 'T12:00:00').getMonth()]}
+                      {datStr}
                     </span>
                   )}
                 </button>
@@ -142,8 +145,8 @@ export default function AgendaPage() {
             </div>
           ) : (
             <div className="space-y-10">
-              {groepenPerDag.map(([dag, dagEvents]) => (
-                <div key={dag}>
+              {groepenPerDag.map(([datum, dagEvents]) => (
+                <div key={datum}>
                   {/* Dag-header met volledige datum */}
                   <div className="flex items-center gap-4 mb-5">
                     <div className="flex flex-col">
@@ -151,7 +154,7 @@ export default function AgendaPage() {
                         className="px-4 py-1 rounded-full text-sm font-black uppercase text-black self-start"
                         style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}
                       >
-                        {dag}
+                        {dagEvents[0]?.dag}
                       </span>
                     </div>
                     <div className="flex flex-col">
