@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",
+    "@emailjs/browser": "^4.4.1",
     "@react-google-maps/api": "^2.20.8",
     "@sanity/client": "^6",
     "@sanity/image-url": "^1",

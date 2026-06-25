@@ -7,6 +7,7 @@ const navLinks = [
   { label: 'Locaties', href: '/locaties' },
   { label: 'Kroegentocht', href: '/kroegentocht' },
   { label: 'Prijzen Radar', href: '/prijzen' },
+  { label: 'Contact', href: '/contact' },
 ];
 
 function slugify(naam) {
