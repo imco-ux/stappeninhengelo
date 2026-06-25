@@ -80,42 +80,48 @@ function BonScanner() {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4"
+        <div className="fixed inset-0 z-50 flex items-end justify-center"
           style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)' }}
           onClick={e => { if (e.target === e.currentTarget) sluit(); }}>
-          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-[#2a2a2a] overflow-hidden" style={{ backgroundColor: '#111' }}>
+          <div className="w-full max-w-lg rounded-t-3xl border-t border-x border-[#2a2a2a]" style={{ backgroundColor: '#111', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+
+            {/* Trekker */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-[#333]" />
+            </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e]">
-              <p className="font-black uppercase text-sm text-white" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
-                {fase === 'kies' && 'Scan een bon'}
-                {fase === 'preview' && 'Bon bekijken'}
-                {fase === 'scannen' && 'AI analyseert...'}
-                {fase === 'resultaat' && 'Gevonden informatie'}
-                {fase === 'verstuurd' && 'Verstuurd!'}
-                {fase === 'fout' && 'Er ging iets mis'}
+            <div className="flex items-center justify-between px-5 py-3">
+              <p className="font-black uppercase text-base text-white" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
+                {fase === 'kies' && '📷 Scan een bon'}
+                {fase === 'scannen' && '🔍 AI analyseert...'}
+                {fase === 'resultaat' && '✓ Gevonden informatie'}
+                {fase === 'verstuurd' && '✓ Verstuurd!'}
+                {fase === 'fout' && '❌ Er ging iets mis'}
               </p>
-              <button onClick={sluit} className="text-gray-500 hover:text-white">
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <button onClick={sluit} className="text-gray-500 hover:text-white w-8 h-8 flex items-center justify-center rounded-full bg-[#222]">
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
 
-            <div className="px-5 py-5">
+            <div className="px-5 pb-6">
 
               {/* Stap: kies foto */}
               {fase === 'kies' && (
-                <div className="text-center py-4">
-                  <p className="text-gray-400 text-sm mb-6">Maak een foto van een bon of prijslijst. De AI leest automatisch de drankprijzen en locatie uit.</p>
+                <div>
+                  <p className="text-gray-500 text-sm mb-5 text-center">Foto van een bon of prijslijst — de AI leest drankprijzen en locatie automatisch uit.</p>
                   <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleBestand} className="hidden" />
                   <div className="flex flex-col gap-3">
                     <button onClick={() => inputRef.current?.click()}
-                      className="w-full py-4 rounded-xl font-black uppercase text-sm text-black"
+                      className="w-full py-4 rounded-2xl font-black uppercase text-base text-black flex items-center justify-center gap-2"
                       style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}>
-                      📷 Camera gebruiken
+                      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                      Camera gebruiken
                     </button>
                     <button onClick={() => { if (inputRef.current) { inputRef.current.removeAttribute('capture'); inputRef.current.click(); setTimeout(() => inputRef.current?.setAttribute('capture','environment'), 500); } }}
-                      className="w-full py-3 rounded-xl font-bold text-sm text-gray-300 border border-[#2a2a2a] hover:border-oranje hover:text-oranje transition-colors">
-                      Foto uploaden uit bibliotheek
+                      className="w-full py-3.5 rounded-2xl font-bold text-sm text-gray-300 border border-[#2a2a2a] flex items-center justify-center gap-2 hover:border-oranje hover:text-oranje transition-colors">
+                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                      Uploaden uit bibliotheek
                     </button>
                   </div>
                 </div>
