@@ -102,7 +102,7 @@ const leegForm = {
   title: '', type: 'Club Night', datum: '', tijd_start: '22:00', tijd_eind: '04:00',
   prijs: 'Gratis', prijs_bedrag: '', leeftijd: '18+', adres: '', omschrijving: '',
   ticket_url: '', ticket_shortcode: '', venue_naam: '', goedgekeurd: true, hot: false,
-  is_centrumbreed: false,
+  is_centrumbreed: false, centrumbreed_id: '',
   meta_pixel_id: '', tiktok_pixel_id: '',
   // extra_info velden
   artiesten: '', verwacht_bezoekers: '', publiek: [], genres: [],
@@ -134,8 +134,9 @@ export default function AdminEvents() {
   const [subEvents, setSubEvents] = useState([]);
   const [bannerBezig, setBannerBezig] = useState({});
   const [centrumLogoBezig, setCentrumLogoBezig] = useState(false);
+  const [centrumEvents, setCentrumEvents] = useState([]);
 
-  useEffect(() => { laadEvents(); laadVenues(); }, []);
+  useEffect(() => { laadEvents(); laadVenues(); laadCentrumEvents(); }, []);
 
   async function laadEvents() {
     setLaden(true);
@@ -151,6 +152,11 @@ export default function AdminEvents() {
   async function laadVenues() {
     const { data } = await supabase.from('venues').select('id, naam, adres, logo_url').order('naam');
     setVenues(data || []);
+  }
+
+  async function laadCentrumEvents() {
+    const { data } = await supabase.from('events').select('id, title, datum').eq('is_centrumbreed', true).eq('goedgekeurd', true).order('datum');
+    setCentrumEvents(data || []);
   }
 
   async function laadSubEvents(centrumId) {
@@ -211,7 +217,7 @@ export default function AdminEvents() {
       adres: ev.adres || '', omschrijving: ev.omschrijving || '',
       ticket_url: ev.ticket_url || '', ticket_shortcode: ev.ticket_shortcode || '',
       venue_naam: ev.venue_naam || '', goedgekeurd: ev.goedgekeurd ?? true, hot: ev.hot ?? false,
-      is_centrumbreed: ev.is_centrumbreed ?? false,
+      is_centrumbreed: ev.is_centrumbreed ?? false, centrumbreed_id: ev.centrumbreed_id || '',
       meta_pixel_id: ev.meta_pixel_id || '', tiktok_pixel_id: ev.tiktok_pixel_id || '',
       artiesten: ei.artiesten || '', verwacht_bezoekers: ei.verwacht_bezoekers || '',
       publiek: ei.publiek || [], genres: ei.genres || [],
@@ -305,6 +311,8 @@ export default function AdminEvents() {
       meta_pixel_id: form.meta_pixel_id || null, tiktok_pixel_id: form.tiktok_pixel_id || null,
       hot: form.hot,
       is_centrumbreed: form.is_centrumbreed,
+      centrumbreed_id: form.centrumbreed_id || null,
+      centrumbreed_link_goedgekeurd: form.centrumbreed_id ? true : false,
       extra_info: {
         artiesten: form.artiesten || null,
         verwacht_bezoekers: form.verwacht_bezoekers || null,
@@ -791,6 +799,22 @@ export default function AdminEvents() {
                         </div>
                       ))}
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* Koppelen aan centrumbreed event (alleen voor niet-centrumbreed events) */}
+              {!form.is_centrumbreed && centrumEvents.length > 0 && (
+                <div className={SEC} style={{ backgroundColor: '#0d0d0d' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Koppelen aan centrumbreed event</p>
+                  <select value={form.centrumbreed_id} onChange={e => upd('centrumbreed_id', e.target.value)} className={INP}>
+                    <option value="">— Niet gekoppeld —</option>
+                    {centrumEvents.map(ce => (
+                      <option key={ce.id} value={ce.id}>{ce.title} ({formatDatum(ce.datum)})</option>
+                    ))}
+                  </select>
+                  {form.centrumbreed_id && (
+                    <p className="text-xs text-green-400">✓ Event wordt direct goedgekeurd als onderdeel van het centrumbreed evenement</p>
                   )}
                 </div>
               )}

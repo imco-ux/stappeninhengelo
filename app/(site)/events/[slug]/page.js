@@ -167,9 +167,9 @@ export default function EventDetailPage() {
 
         {/* Extra banner fotos strip */}
         {bannerFotos.length > 1 && (
-          <div className="flex gap-2 px-4 py-3 overflow-x-auto max-w-5xl mx-auto">
+          <div className="grid grid-cols-3 gap-3 px-4 py-4 max-w-5xl mx-auto">
             {bannerFotos.slice(1).map((foto, i) => (
-              <div key={i} className="flex-shrink-0 w-40 h-24 rounded-xl overflow-hidden border border-[#252525]">
+              <div key={i} className="rounded-xl overflow-hidden border border-[#252525]" style={{ height: '200px' }}>
                 <img src={foto} alt="" className="w-full h-full object-cover" />
               </div>
             ))}
@@ -285,10 +285,12 @@ export default function EventDetailPage() {
                   <p className="text-gray-500 text-xs uppercase tracking-wide mb-3">Deelnemende locaties</p>
                   <div className="space-y-2">
                     {ei.deelnemende_venues.map((naam, i) => (
-                      <div key={i} className="flex items-center gap-2">
+                      <a key={i} href={`/locaties/${naam.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')}`}
+                        className="flex items-center gap-2 group">
                         <div className="w-1.5 h-1.5 rounded-full bg-oranje flex-shrink-0" />
-                        <span className="text-white text-sm font-bold">{naam}</span>
-                      </div>
+                        <span className="text-white text-sm font-bold group-hover:text-oranje transition-colors">{naam}</span>
+                        <svg width="10" height="10" fill="none" stroke="#666" strokeWidth="2" viewBox="0 0 24 24" className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"><path d="M9 18l6-6-6-6"/></svg>
+                      </a>
                     ))}
                   </div>
                 </div>
