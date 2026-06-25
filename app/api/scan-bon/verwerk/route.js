@@ -3,11 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 const CATEGORIEEN = {
   'Bier': 'vaasje, pils, hertog, heineken, grolsch, amstel, biertje, tapbier, fluitje, bokbier, IPA, weizen, speciaalbier',
   'Wijn': 'rosé, rode wijn, witte wijn, chardonnay, merlot, sauvignon, prosecco, cava, champagne, huiswijn, glas wijn',
@@ -20,6 +15,7 @@ const CATEGORIEEN = {
 
 // PATCH: sla de bewerkte versie op vanuit de gebruiker
 export async function PATCH(req) {
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   try {
     const { scan_id, locatie_naam, dranken } = await req.json();
     if (!scan_id) return Response.json({ error: 'Geen scan_id' }, { status: 400 });
@@ -42,6 +38,7 @@ export async function PATCH(req) {
 
 // POST: AI analyseert de bon
 export async function POST(req) {
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   try {
     const { scan_id } = await req.json();
     if (!scan_id) return Response.json({ error: 'Geen scan_id' }, { status: 400 });
