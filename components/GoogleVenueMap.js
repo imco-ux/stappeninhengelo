@@ -29,11 +29,23 @@ const mapStyles = [
   { featureType: 'administrative.neighborhood', elementType: 'labels.text.fill', stylers: [{ color: '#555555' }] },
 ];
 
-function gemiddeldePrijs(dranken, drankFilter) {
+function gemiddeldePrijs(dranken, drankFilter, globaleFallback) {
   if (!dranken || dranken.length === 0) return null;
-  const relevant = drankFilter ? dranken.filter(d => d.naam === drankFilter) : dranken;
-  if (relevant.length === 0) return null;
-  return relevant.reduce((s, d) => s + d.prijs, 0) / relevant.length;
+  if (drankFilter) {
+    const gevonden = dranken.find(d => d.naam === drankFilter);
+    return gevonden ? gevonden.prijs : (globaleFallback?.[drankFilter] ?? null);
+  }
+  // Alle categorieën meetellen — ontbrekende prijzen vervangen door globaal gemiddelde
+  const categorieen = Object.keys(globaleFallback || {});
+  if (categorieen.length === 0) {
+    if (dranken.length === 0) return null;
+    return dranken.reduce((s, d) => s + d.prijs, 0) / dranken.length;
+  }
+  const prijzen = categorieen.map(cat => {
+    const eigen = dranken.find(d => d.naam === cat);
+    return eigen ? eigen.prijs : (globaleFallback[cat] ?? null);
+  }).filter(p => p !== null);
+  return prijzen.length > 0 ? prijzen.reduce((a, b) => a + b, 0) / prijzen.length : null;
 }
 
 function pinKleur(prijs, gemiddelde, spread) {
@@ -342,11 +354,19 @@ export default function GoogleVenueMap({
   // Prijzenkleuren berekenen
   let prijzenMap = {};
   if (mode === 'prijzen' && bierprijzen.length > 0) {
-    const alleGemiddeldes = bierprijzen.map(v => gemiddeldePrijs(v.dranken, drankFilter)).filter(Boolean);
+    // Bereken globaal gemiddelde per categorie als fallback voor ontbrekende prijzen
+    const alleCategorieen = ['Bier', 'Wijn', 'Mixdrank', 'Cocktail', 'Hard Seltzer', 'Shot', 'Frisdrank'];
+    const globaleFallback = {};
+    alleCategorieen.forEach(cat => {
+      const prijzen = bierprijzen.flatMap(v => v.dranken || []).filter(d => d.naam === cat).map(d => d.prijs);
+      if (prijzen.length > 0) globaleFallback[cat] = prijzen.reduce((a, b) => a + b, 0) / prijzen.length;
+    });
+
+    const alleGemiddeldes = bierprijzen.map(v => gemiddeldePrijs(v.dranken, drankFilter, globaleFallback)).filter(Boolean);
     const avg = alleGemiddeldes.reduce((a, b) => a + b, 0) / alleGemiddeldes.length;
     const spread = (Math.max(...alleGemiddeldes) - Math.min(...alleGemiddeldes)) || 1;
     bierprijzen.forEach(v => {
-      const prijs = gemiddeldePrijs(v.dranken, drankFilter);
+      const prijs = gemiddeldePrijs(v.dranken, drankFilter, globaleFallback);
       prijzenMap[v.slug] = { prijs, kleur: pinKleur(prijs, avg, spread), dranken: v.dranken };
     });
   }
