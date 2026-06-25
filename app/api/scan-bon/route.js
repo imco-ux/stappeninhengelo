@@ -8,8 +8,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Drankcategorieën die wij bijhouden op de site
-const DRANK_CATEGORIEEN = ['Bier', 'Wijn', 'Mixdrank', 'Cocktail', 'Hard Seltzer', 'Shot', 'Frisdrank'];
+// Drankcategorieën met voorbeelden van alternatieve namen
+const CATEGORIE_VOORBEELDEN = {
+  'Bier': 'vaasje, pils, hertog, heineken, grolsch, amstel, biertje, tapbier, fluitje, bokbier, IPA, weizen',
+  'Wijn': 'rosé, rode wijn, witte wijn, chardonnay, merlot, sauvignon, prosecco, cava, champagne, huiswijn, glas wijn',
+  'Mixdrank': 'gin tonic, vodka cola, rum cola, bacardi, whisky cola, long drink, breezers, WKD, smirnoff ice',
+  'Cocktail': 'mojito, cosmopolitan, margarita, aperol spritz, sex on the beach, pina colada, hugo',
+  'Hard Seltzer': 'stëlz, stelz, viper, white claw, truly, hard seltzer, alcoholic seltzer',
+  'Shot': 'tequila, sambuca, jaegermeister, jager, wodka, shot, borrel, jenever, whisky shot',
+  'Frisdrank': 'cola, fanta, sprite, spa, water, appelsap, sinaasappelsap, energy drink, red bull, monster',
+};
 
 export async function POST(req) {
   try {
@@ -66,20 +74,22 @@ Bekende locaties in ons systeem: ${venueNamen}
 Geef een JSON terug met dit formaat:
 {
   "locatie_naam": "naam zoals op de bon of null",
-  "venue_id": "id van de locatie als die overeenkomt met een bekende locatie, anders null",
   "venue_gevonden": true of false,
   "dranken": [
-    { "naam": "naam van de drank", "prijs": 2.50, "categorie": "Bier" }
+    { "naam": "naam van de drank zoals op de bon", "prijs": 2.50, "categorie": "Bier" }
   ]
 }
 
-Regels voor dranken:
-- Haal ALLEEN dranken eruit die in één van deze categorieën vallen: ${DRANK_CATEGORIEEN.join(', ')}
-- Geen water, koffie, thee, eten of andere niet-alcoholische items (behalve Frisdrank)
-- Prijs als getal zonder €
-- Kies de dichtstbijzijnde categorie uit de lijst
-- Vergelijk de locatienaam op de bon met de bekende locaties (ook als de spelling iets afwijkt)
-- Als je de venue_id niet kunt bepalen, geef null
+Categorieën met voorbeelden van wat erbij hoort:
+${Object.entries(CATEGORIE_VOORBEELDEN).map(([cat, vb]) => `- ${cat}: ${vb}`).join('\n')}
+
+Regels:
+- Haal ALLEEN dranken eruit die in één van bovenstaande categorieën passen
+- Een "vaasje" is Bier, "Stëlz" of "Viper" is Hard Seltzer, een wijnnaam is Wijn, etc.
+- Laat de naam staan zoals hij op de bon staat (bijv. "Vaasje" niet veranderen naar "Bier")
+- Geen koffie, thee, eten of non-food items
+- Prijs als getal zonder €-teken
+- Vergelijk de locatienaam losjes met de bekende locaties (ook bij spellingsverschillen)
 - Geef ALLEEN het JSON object terug, geen uitleg`
           }
         ]
@@ -120,6 +130,15 @@ Regels voor dranken:
     });
 
   } catch (e) {
-    return Response.json({ error: e.message }, { status: 500 });
+    console.error('[scan-bon] fout:', e.message);
+    let foutTekst = 'Er ging iets mis bij het verwerken van de bon.';
+    if (e.message?.includes('ANTHROPIC') || e.message?.includes('api_key')) {
+      foutTekst = 'AI service is niet geconfigureerd. Neem contact op met de beheerder.';
+    } else if (e.message?.includes('storage') || e.message?.includes('bucket')) {
+      foutTekst = 'Foto kon niet worden opgeslagen. Probeer het opnieuw.';
+    } else if (e.message?.includes('JSON') || e.message?.includes('parse')) {
+      foutTekst = 'AI kon de bon niet lezen. Probeer een duidelijkere foto.';
+    }
+    return Response.json({ error: foutTekst, detail: e.message }, { status: 500 });
   }
 }

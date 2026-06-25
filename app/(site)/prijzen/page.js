@@ -42,7 +42,7 @@ function BonScanner() {
     try {
       const res = await fetch('/api/scan-bon', { method: 'POST', body: fd });
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      if (data.error) throw new Error(data.error + (data.detail ? `\n(${data.detail})` : ''));
       setResultaat(data.scan);
       setVenueInfo({ gevonden: data.venue_gevonden, naam: data.venue_naam });
       setFase('resultaat');
