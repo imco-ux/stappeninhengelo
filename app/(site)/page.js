@@ -141,15 +141,45 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const vandaag = new Date().toISOString().split('T')[0];
+    const nu = new Date();
+    const vandaag = nu.toISOString().split('T')[0];
+    // Einde van deze week (zondag)
+    const dagVdWeek = nu.getDay(); // 0=zo, 1=ma ... 6=za
+    const dagenTotZondag = dagVdWeek === 0 ? 0 : 7 - dagVdWeek;
+    const eindWeek = new Date(nu);
+    eindWeek.setDate(nu.getDate() + dagenTotZondag);
+    const eindWeekStr = eindWeek.toISOString().split('T')[0];
+
     Promise.all([
-      supabase.from('events').select('*').eq('goedgekeurd', true).gte('datum', vandaag).is('centrumbreed_id', null).order('datum').limit(20),
+      supabase.from('events').select('*').eq('goedgekeurd', true).gte('datum', vandaag).lte('datum', eindWeekStr).is('centrumbreed_id', null).order('datum').limit(50),
       supabase.from('venues').select('*').eq('actief', true),
       supabase.from('nieuws').select('*').eq('gepubliceerd', true).order('created_at', { ascending: false }).limit(6),
     ]).then(([evRes, veRes, niRes]) => {
       const venueMap = {};
       for (const v of (veRes.data || [])) venueMap[v.naam] = v;
-      setEvents((evRes.data || []).filter(e => !e.centrumbreed_id).map(e => {
+      function isVoorbij(e) {
+        const tijdDelen = (e.tijd || '').split(' – ');
+        const eindTijd = tijdDelen[1]?.trim() || null;
+        const startTijd = tijdDelen[0]?.trim() || '22:00';
+        const [startH, startM] = startTijd.split(':').map(Number);
+        const datum = new Date(e.datum + 'T12:00:00');
+        const startDt = new Date(datum);
+        startDt.setHours(startH || 22, startM || 0, 0, 0);
+        let eindDt;
+        if (eindTijd) {
+          const [eindH, eindM] = eindTijd.split(':').map(Number);
+          eindDt = new Date(datum);
+          eindDt.setHours(eindH, eindM, 0, 0);
+          if (eindDt <= startDt) eindDt.setDate(eindDt.getDate() + 1); // over middernacht
+        } else {
+          eindDt = new Date(datum);
+          eindDt.setDate(eindDt.getDate() + 1);
+          eindDt.setHours(6, 0, 0, 0); // standaard 06:00 volgende dag
+        }
+        return nu > eindDt;
+      }
+
+      setEvents((evRes.data || []).filter(e => !e.centrumbreed_id && !isVoorbij(e)).map(e => {
         const v = venueMap[e.venue_naam] || null;
         return {
           ...e, _id: e.id, dag: dagNaam(e.datum),
