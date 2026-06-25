@@ -35,9 +35,19 @@ const typeKleurMap = {
   'Brouwerij / Restaurant':  '#a3e635',
   // Overig
   'Karaoke':                 '#ec4899',
+  'Karaokebar':              '#ec4899',
   'Terras':                  '#4ade80',
   'Terras/Bar':              '#4ade80',
   'Lounge':                  '#818cf8',
+  // Eten (laat open)
+  'Cafetaria':               '#f97316',
+  'Döner / Shoarma':         '#ef4444',
+  'Snackbar':                '#f97316',
+  'Friettent':               '#facc15',
+  'Pizzeria':                '#dc2626',
+  'Burger':                  '#ea580c',
+  'Sushi / Aziatisch':       '#e879f9',
+  'Eetcafé':                 '#fb923c',
 };
 
 // Genereer Tailwind-vrije inline kleur per type
@@ -102,13 +112,15 @@ export default function LocatiesPage() {
     });
   }, []);
 
-  const types = useMemo(() => ['Alle', ...new Set(locaties.map(l => l.type))], [locaties]);
+  const ETEN_TYPES = ['Cafetaria','Döner / Shoarma','Snackbar','Friettent','Pizzeria','Burger','Sushi / Aziatisch','Eetcafé'];
+
+  const types = useMemo(() => ['Alle', 'Eten 🍟', ...new Set(locaties.map(l => l.type).filter(t => !ETEN_TYPES.includes(t)))], [locaties]);
 
   const gefilterd = useMemo(() => locaties.filter(l => {
     const zoekOk = (l.naam||'').toLowerCase().includes(zoek.toLowerCase()) ||
                    (l.adres||'').toLowerCase().includes(zoek.toLowerCase()) ||
                    (l.omschrijving||'').toLowerCase().includes(zoek.toLowerCase());
-    const typeOk = type === 'Alle' || l.type === type;
+    const typeOk = type === 'Alle' || (type === 'Eten 🍟' ? ETEN_TYPES.includes(l.type) : l.type === type);
     const openOk = !nurOpen || berekenOpenStatus(l.openingstijden)?.open === true;
     return zoekOk && typeOk && openOk;
   }), [locaties, zoek, type, nurOpen]);

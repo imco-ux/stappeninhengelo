@@ -7,7 +7,12 @@ import { supabase } from '@/lib/supabase';
 
 const PlacesInput = dynamic(() => import('@/components/PlacesInput'), { ssr: false });
 
-const TYPES = ['Feestcafé','Club','Café','Karaokebar','Muziekcafé','Grand Café','Wijnbar','Biercafé','Cocktailbar','Brouwerij','Danscafé'];
+const TYPES = [
+  // Drank
+  'Feestcafé','Club','Café','Karaokebar','Muziekcafé','Grand Café','Wijnbar','Biercafé','Cocktailbar / Lounge','Brouwerij','Danscafé','Bruin Café','Speciaalbiercafé','Restaurant / Borrel','Restaurant / Bar','Bar & Keuken',
+  // Eten (laat open)
+  'Cafetaria','Döner / Shoarma','Snackbar','Friettent','Pizzeria','Burger','Sushi / Aziatisch','Eetcafé',
+];
 
 const DAGEN = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
 const leegTijden = () => Object.fromEntries(DAGEN.map(d => [d, { open: '', sluit: '', gesloten: false }]));
