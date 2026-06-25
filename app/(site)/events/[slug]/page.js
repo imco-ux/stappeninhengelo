@@ -179,8 +179,8 @@ export default function EventDetailPage() {
 
         <div className="max-w-5xl mx-auto px-4 py-8">
           <button onClick={() => router.back()} className="text-gray-500 text-xs uppercase tracking-wide hover:text-oranje transition-colors mb-8 inline-block">
-            ← Terug naar agenda
-          </a>
+            ← Terug
+          </button>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main content */}
