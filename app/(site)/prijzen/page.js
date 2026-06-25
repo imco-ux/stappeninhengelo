@@ -14,6 +14,7 @@ function BonScanner() {
   const [resultaat, setResultaat] = useState(null);
   const [venueInfo, setVenueInfo] = useState(null); // { gevonden, naam }
   const [foutTekst, setFoutTekst] = useState('');
+  const [scanId, setScanId] = useState(null);
   const inputRef = useRef(null);
 
   function sluit() {
@@ -23,26 +24,60 @@ function BonScanner() {
     setBestand(null);
     setResultaat(null);
     setVenueInfo(null);
+    setScanId(null);
   }
 
-  function handleBestand(e) {
+  async function handleBestand(e) {
     const f = e.target.files?.[0];
     if (!f) return;
-    setBestand(f);
-    setPreview(URL.createObjectURL(f));
-    // Direct scannen zodra foto gekozen is
     setFase('scannen');
-    scannen(f);
     e.target.value = '';
+    // Converteer naar JPEG en resize naar max 1200px (ook HEIC van iPhone)
+    const jpeg = await new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(f);
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => {
+          URL.revokeObjectURL(url);
+          resolve(new File([blob], 'bon.jpg', { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.85);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(f); };
+      img.src = url;
+    });
+    setBestand(jpeg);
+    setPreview(URL.createObjectURL(jpeg));
+    scannen(jpeg);
   }
 
   async function scannen(f) {
     const fd = new FormData();
     fd.append('bon', f || bestand);
     try {
-      const res = await fetch('/api/scan-bon', { method: 'POST', body: fd });
-      const data = await res.json();
+      // Stap 1: upload foto (snel, < 3 sec)
+      const uploadRes = await fetch('/api/scan-bon', { method: 'POST', body: fd });
+      const uploadData = await uploadRes.json();
+      if (uploadData.error) throw new Error(uploadData.error);
+
+      // Stap 2: AI analyse via apart endpoint (kan iets langer duren)
+      const verwerkRes = await fetch('/api/scan-bon/verwerk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scan_id: uploadData.scan_id }),
+      });
+      const data = await verwerkRes.json();
       if (data.error) throw new Error(data.error + (data.detail ? `\n(${data.detail})` : ''));
+
+      setScanId(uploadData.scan_id);
       setResultaat(data.scan);
       setVenueInfo({ gevonden: data.venue_gevonden, naam: data.venue_naam });
       setFase('resultaat');
@@ -52,8 +87,28 @@ function BonScanner() {
     }
   }
 
-  function verstuur() {
-    // Al opgeslagen door API
+  async function verstuur() {
+    try {
+      const res = await fetch('/api/scan-bon/verwerk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scan_id: scanId,
+          locatie_naam: resultaat.locatie_naam,
+          dranken: resultaat.dranken,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFoutTekst('Opslaan mislukt: ' + (data.error || res.status));
+        setFase('fout');
+        return;
+      }
+    } catch (e) {
+      setFoutTekst('Verbindingsfout bij versturen: ' + e.message);
+      setFase('fout');
+      return;
+    }
     setFase('verstuurd');
   }
 
@@ -168,7 +223,10 @@ function BonScanner() {
                               placeholder="Naam drank"
                               className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-oranje" />
                           </div>
-                          <span className="text-xs text-gray-600 flex-shrink-0 hidden sm:block">{d.categorie}</span>
+                          <span className="text-xs text-gray-500 flex-shrink-0 bg-[#1a1a1a] px-2 py-1 rounded-lg">{d.categorie}</span>
+                          {d.aantal > 1 && (
+                            <span className="text-xs text-gray-500 flex-shrink-0">{d.aantal}×</span>
+                          )}
                           <div className="relative flex-shrink-0">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">€</span>
                             <input type="number" step="0.01" value={d.prijs} onChange={e => updDrank(i, 'prijs', e.target.value)}
