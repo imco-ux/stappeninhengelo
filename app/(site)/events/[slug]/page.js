@@ -316,8 +316,8 @@ export default function EventDetailPage() {
       <Header />
       {pixels}
 
-      {/* Poster bovenaan — volledig breedte, 4:5 verhouding, kruisje rechtsboven */}
-      <div className="relative w-full bg-[#0d0d0d]" style={{ aspectRatio: '4/5', maxHeight: '85vh' }}>
+      {/* Poster bovenaan */}
+      <div className="relative w-full bg-[#0d0d0d] aspect-[4/5] max-h-[85vh] overflow-hidden">
         {event.poster_url ? (
           <img src={event.poster_url} alt={event.title} className="w-full h-full object-cover" />
         ) : (
