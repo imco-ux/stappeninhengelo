@@ -316,22 +316,40 @@ export default function EventDetailPage() {
       <Header />
       {pixels}
 
-      <div className="max-w-2xl mx-auto px-4 py-10">
-        <button onClick={() => router.back()} className="text-gray-500 text-xs uppercase tracking-wide hover:text-oranje transition-colors mb-6 inline-block">
-          ← Terug
-        </button>
-
-        <div className="w-full flex items-center justify-center bg-[#0d0d0d] rounded-2xl border-2 border-[#F27A00]/30 mb-6 overflow-hidden" style={{ height: '260px' }}>
-          {event.poster_url ? (
-            <img src={event.poster_url} alt={event.title} className="w-full h-full object-cover" />
-          ) : (
+      {/* Poster bovenaan — volledig breedte, 4:5 verhouding, kruisje rechtsboven */}
+      <div className="relative w-full bg-[#0d0d0d]" style={{ aspectRatio: '4/5', maxHeight: '85vh' }}>
+        {event.poster_url ? (
+          <img src={event.poster_url} alt={event.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1a0800 0%, #000 100%)' }}>
             <img src="/images/logo-small.png" alt="" className="w-24 h-24 object-contain opacity-20" />
-          )}
-        </div>
+          </div>
+        )}
+        {/* Kruisje rechtsboven */}
+        <button
+          onClick={() => router.back()}
+          className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center z-10"
+          style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+          aria-label="Sluiten"
+        >
+          <svg width="18" height="18" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+        {/* 18+ badge linksboven */}
+        {event.leeftijd && (
+          <div className="absolute top-4 left-4 px-2.5 py-1 rounded-lg text-xs font-black text-white"
+            style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+            {event.leeftijd}
+          </div>
+        )}
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 py-6 pb-28 sm:pb-10">
 
         <div className="space-y-4">
           <div>
-            <p className="text-oranje font-bold text-sm uppercase tracking-wide mb-1">{event.venue_naam} · {event.type}</p>
+            <p className="text-oranje font-bold text-sm uppercase tracking-wide mb-1">{event.venue_naam}{event.type ? ` · ${event.type}` : ''}</p>
             <h1 className="text-5xl font-black uppercase leading-none" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>{event.title}</h1>
           </div>
 
@@ -432,6 +450,21 @@ export default function EventDetailPage() {
 
           <KnoppenRij event={event} shareText={shareText} />
         </div>
+      </div>
+
+      {/* Grote sluit-knop onderaan — alleen mobiel */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 sm:hidden z-40"
+        style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.95) 60%, transparent 100%)' }}>
+        <button
+          onClick={() => router.back()}
+          className="w-full py-4 rounded-2xl font-black uppercase text-base text-white flex items-center justify-center gap-2"
+          style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', fontFamily: "'Big Shoulders Display', sans-serif" }}
+        >
+          <svg width="18" height="18" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+          Sluiten
+        </button>
       </div>
 
       <Footer />
