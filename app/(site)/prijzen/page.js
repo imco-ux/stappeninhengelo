@@ -11,7 +11,8 @@ function BonScanner() {
   const [fase, setFase] = useState('kies'); // kies | scannen | resultaat | verstuurd | fout
   const [preview, setPreview] = useState(null);
   const [bestand, setBestand] = useState(null);
-  const [resultaat, setResultaat] = useState(null); // { locatie_naam, dranken }
+  const [resultaat, setResultaat] = useState(null);
+  const [venueInfo, setVenueInfo] = useState(null); // { gevonden, naam }
   const [foutTekst, setFoutTekst] = useState('');
   const inputRef = useRef(null);
 
@@ -21,6 +22,7 @@ function BonScanner() {
     setPreview(null);
     setBestand(null);
     setResultaat(null);
+    setVenueInfo(null);
   }
 
   function handleBestand(e) {
@@ -28,19 +30,21 @@ function BonScanner() {
     if (!f) return;
     setBestand(f);
     setPreview(URL.createObjectURL(f));
-    setFase('preview');
+    // Direct scannen zodra foto gekozen is
+    setFase('scannen');
+    scannen(f);
     e.target.value = '';
   }
 
-  async function scannen() {
-    setFase('scannen');
+  async function scannen(f) {
     const fd = new FormData();
-    fd.append('bon', bestand);
+    fd.append('bon', f || bestand);
     try {
       const res = await fetch('/api/scan-bon', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setResultaat(data.scan);
+      setVenueInfo({ gevonden: data.venue_gevonden, naam: data.venue_naam });
       setFase('resultaat');
     } catch (e) {
       setFoutTekst(e.message);
@@ -48,8 +52,8 @@ function BonScanner() {
     }
   }
 
-  async function verstuur() {
-    // Resultaat is al opgeslagen door de API, gewoon bevestigen
+  function verstuur() {
+    // Al opgeslagen door API
     setFase('verstuurd');
   }
 
@@ -117,45 +121,43 @@ function BonScanner() {
                 </div>
               )}
 
-              {/* Stap: preview */}
-              {fase === 'preview' && preview && (
-                <div>
-                  <img src={preview} alt="bon" className="w-full max-h-64 object-contain rounded-xl border border-[#2a2a2a] mb-4" />
-                  <div className="flex gap-3">
-                    <button onClick={() => { setFase('kies'); setPreview(null); setBestand(null); }}
-                      className="flex-1 py-3 rounded-xl text-sm text-gray-400 border border-[#2a2a2a] hover:text-white font-bold">
-                      Andere foto
-                    </button>
-                    <button onClick={scannen}
-                      className="flex-1 py-3 rounded-xl font-black uppercase text-sm text-black"
-                      style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}>
-                      Analyseren →
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Stap: scannen */}
               {fase === 'scannen' && (
                 <div className="text-center py-8">
-                  {preview && <img src={preview} alt="bon" className="w-32 h-40 object-cover rounded-xl mx-auto mb-5 opacity-50 border border-[#2a2a2a]" />}
+                  {preview && <img src={preview} alt="bon" className="w-32 h-40 object-cover rounded-xl mx-auto mb-5 opacity-60 border border-[#2a2a2a]" />}
                   <div className="flex items-center justify-center gap-3 text-oranje mb-2">
                     <div className="w-5 h-5 border-2 border-oranje border-t-transparent rounded-full animate-spin" />
                     <span className="font-bold text-sm">AI leest de bon...</span>
                   </div>
-                  <p className="text-gray-600 text-xs">Dit duurt een paar seconden</p>
+                  <p className="text-gray-600 text-xs">Bon is opgeslagen · prijzen worden uitgelezen</p>
                 </div>
               )}
 
               {/* Stap: resultaat */}
               {fase === 'resultaat' && resultaat && (
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+
+                  {/* Venue match status */}
+                  <div className={`rounded-xl px-4 py-3 flex items-center gap-3 ${venueInfo?.gevonden ? 'bg-green-950/30 border border-green-800/40' : 'bg-yellow-950/20 border border-yellow-800/30'}`}>
+                    <span className="text-lg">{venueInfo?.gevonden ? '✓' : '⚠️'}</span>
+                    <div>
+                      {venueInfo?.gevonden
+                        ? <p className="text-green-400 text-sm font-bold">Locatie gevonden: {venueInfo.naam}</p>
+                        : <p className="text-yellow-400 text-sm font-bold">Locatie niet herkend in ons systeem</p>
+                      }
+                      <p className="text-gray-500 text-xs mt-0.5">
+                        {venueInfo?.gevonden ? 'Prijzen worden direct gekoppeld' : 'Beheerder koppelt de locatie handmatig'}
+                      </p>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="text-xs font-bold uppercase text-gray-500 block mb-1">Locatie</label>
+                    <label className="text-xs font-bold uppercase text-gray-500 block mb-1">Locatie op de bon</label>
                     <input value={resultaat.locatie_naam || ''} onChange={e => setResultaat(r => ({ ...r, locatie_naam: e.target.value }))}
                       placeholder="Naam van het café / bar"
                       className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-oranje" />
                   </div>
+
                   <div>
                     <label className="text-xs font-bold uppercase text-gray-500 block mb-2">
                       Gevonden dranken ({resultaat.dranken?.length || 0})
@@ -163,9 +165,12 @@ function BonScanner() {
                     <div className="space-y-2">
                       {(resultaat.dranken || []).map((d, i) => (
                         <div key={i} className="flex gap-2 items-center">
-                          <input value={d.naam} onChange={e => updDrank(i, 'naam', e.target.value)}
-                            placeholder="Naam drank"
-                            className="flex-1 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-oranje" />
+                          <div className="flex-1 min-w-0">
+                            <input value={d.naam} onChange={e => updDrank(i, 'naam', e.target.value)}
+                              placeholder="Naam drank"
+                              className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-oranje" />
+                          </div>
+                          <span className="text-xs text-gray-600 flex-shrink-0 hidden sm:block">{d.categorie}</span>
                           <div className="relative flex-shrink-0">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">€</span>
                             <input type="number" step="0.01" value={d.prijs} onChange={e => updDrank(i, 'prijs', e.target.value)}
@@ -181,6 +186,7 @@ function BonScanner() {
                       + Drank toevoegen
                     </button>
                   </div>
+
                   <button onClick={verstuur}
                     className="w-full py-3.5 rounded-xl font-black uppercase text-sm text-black mt-2"
                     style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}>
