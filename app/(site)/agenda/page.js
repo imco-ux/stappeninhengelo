@@ -50,7 +50,8 @@ export default function AgendaPage() {
         venueMap[v.eigenaar_id] = v;
       }
       setEvents((evRes.data || []).map(e => {
-        const v = venueMap[e.venue_naam] || venueMap[e.eigenaar_id] || null;
+        // Only use logo from exact venue_naam match — eigenaar_id fallback caused wrong logos on centrum events
+        const vByNaam = venueMap[e.venue_naam] || null;
         return {
           ...e,
           _id: e.id,
@@ -58,7 +59,7 @@ export default function AgendaPage() {
           datumLabel: datumLabel(e.datum),
           venue: e.venue_naam,
           posterUrl: e.poster_url || null,
-          venueLogo: v?.logo_url || null,
+          venueLogo: vByNaam?.logo_url || null,
         };
       }));
       setLaden(false);

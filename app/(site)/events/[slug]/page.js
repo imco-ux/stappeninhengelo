@@ -128,11 +128,20 @@ export default function EventDetailPage() {
 
           {/* Artiesten, genres, publiek, bezoekers */}
           {(event.extra_info?.artiesten || event.extra_info?.verwacht_bezoekers || event.extra_info?.genres?.length > 0 || event.extra_info?.publiek?.length > 0) && (
-            <div className="border-t border-[#1e1e1e] pt-4 space-y-3">
+            <div className="border-t border-[#1e1e1e] pt-4 space-y-4">
               {event.extra_info?.artiesten && (
                 <div>
-                  <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Line-up / Artiesten</p>
-                  <p className="text-white text-sm font-semibold">{event.extra_info.artiesten}</p>
+                  <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Line-up / Artiesten</p>
+                  <div className="space-y-2">
+                    {event.extra_info.artiesten.split(',').map(a => a.trim()).filter(Boolean).map((artiest, i) => (
+                      <div key={i} className="flex items-center gap-3 bg-[#141414] border border-[#252525] rounded-xl px-4 py-2.5">
+                        <div className="w-7 h-7 rounded-full bg-oranje/10 border border-oranje/30 flex items-center justify-center flex-shrink-0">
+                          <span className="text-oranje text-xs font-black">{i + 1}</span>
+                        </div>
+                        <span className="text-white text-sm font-bold">{artiest}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               {event.extra_info?.verwacht_bezoekers && (
@@ -166,6 +175,33 @@ export default function EventDetailPage() {
               )}
             </div>
           )}
+
+          {/* Deelnemende locaties */}
+          {event.extra_info?.deelnemende_venues?.length > 0 && (
+            <div className="border-t border-[#1e1e1e] pt-4">
+              <p className="text-gray-500 text-xs uppercase tracking-wide mb-3">Deelnemende locaties</p>
+              <div className="grid grid-cols-2 gap-2">
+                {event.extra_info.deelnemende_venues.map((naam, i) => (
+                  <div key={i} className="flex items-center gap-2 bg-[#141414] border border-[#252525] rounded-xl px-3 py-2.5">
+                    <div className="w-2 h-2 rounded-full bg-oranje flex-shrink-0" />
+                    <span className="text-white text-sm font-bold">{naam}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Extra content secties */}
+          {event.extra_info?.extra_secties?.filter(s => s.titel || s.tekst).map((sectie, i) => (
+            <div key={i} className="border-t border-[#1e1e1e] pt-4">
+              {sectie.titel && (
+                <p className="text-white font-black text-lg uppercase mb-2" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>{sectie.titel}</p>
+              )}
+              {sectie.tekst && (
+                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{sectie.tekst}</p>
+              )}
+            </div>
+          ))}
 
           {event.omschrijving && (
             <p className="text-gray-300 leading-relaxed border-t border-[#1e1e1e] pt-4">{event.omschrijving}</p>

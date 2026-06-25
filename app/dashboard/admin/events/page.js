@@ -88,11 +88,13 @@ function MultiChips({ opties, gekozen, onChange, eigenWaarde, setEigenWaarde, pl
 const leegForm = {
   title: '', type: 'Club Night', datum: '', tijd_start: '22:00', tijd_eind: '04:00',
   prijs: 'Gratis', prijs_bedrag: '', leeftijd: '18+', adres: '', omschrijving: '',
-  ticket_url: '', ticket_shortcode: '', venue_naam: '', goedgekeurd: true,
+  ticket_url: '', ticket_shortcode: '', venue_naam: '', goedgekeurd: true, hot: false,
   knop_label: '', knop_url: '', meta_pixel_id: '', tiktok_pixel_id: '',
   // extra_info velden
   artiesten: '', verwacht_bezoekers: '', publiek: [], genres: [],
   instagram_tags: '', crosspost_instagram: false, instagram_audio: '', promotie_kanalen: [],
+  deelnemende_venues: [],
+  extra_secties: [{ titel: '', tekst: '' }],
 };
 
 export default function AdminEvents() {
@@ -150,7 +152,7 @@ export default function AdminEvents() {
       prijs_bedrag: bedrag, leeftijd: ev.leeftijd || '18+',
       adres: ev.adres || '', omschrijving: ev.omschrijving || '',
       ticket_url: ev.ticket_url || '', ticket_shortcode: ev.ticket_shortcode || '',
-      venue_naam: ev.venue_naam || '', goedgekeurd: ev.goedgekeurd ?? true,
+      venue_naam: ev.venue_naam || '', goedgekeurd: ev.goedgekeurd ?? true, hot: ev.hot ?? false,
       knop_label: ev.knop_label || '', knop_url: ev.knop_url || '',
       meta_pixel_id: ev.meta_pixel_id || '', tiktok_pixel_id: ev.tiktok_pixel_id || '',
       artiesten: ei.artiesten || '', verwacht_bezoekers: ei.verwacht_bezoekers || '',
@@ -159,6 +161,8 @@ export default function AdminEvents() {
       crosspost_instagram: ei.crosspost_instagram || false,
       instagram_audio: ei.instagram_audio || '',
       promotie_kanalen: ei.promotie_kanalen || [],
+      deelnemende_venues: ei.deelnemende_venues || [],
+      extra_secties: ei.extra_secties?.length ? ei.extra_secties : [{ titel: '', tekst: '' }],
     });
     setPosterFile(null);
     setPosterPreview(ev.poster_url || null);
@@ -236,6 +240,7 @@ export default function AdminEvents() {
       eigenaar_id: user?.id, poster_url: poster_url || null,
       knop_label: form.knop_label || null, knop_url: form.knop_url || null,
       meta_pixel_id: form.meta_pixel_id || null, tiktok_pixel_id: form.tiktok_pixel_id || null,
+      hot: form.hot,
       extra_info: {
         artiesten: form.artiesten || null,
         verwacht_bezoekers: form.verwacht_bezoekers || null,
@@ -245,6 +250,8 @@ export default function AdminEvents() {
         crosspost_instagram: form.crosspost_instagram,
         instagram_audio: form.instagram_audio || null,
         promotie_kanalen: form.promotie_kanalen,
+        deelnemende_venues: form.deelnemende_venues,
+        extra_secties: form.extra_secties.filter(s => s.titel || s.tekst),
       },
     };
 
@@ -544,11 +551,65 @@ export default function AdminEvents() {
                 </div>
               </div>
 
+              {/* Deelnemende locaties (centrum events) */}
+              <div className={SEC} style={{ backgroundColor: '#0d0d0d' }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Deelnemende locaties <span className="normal-case font-normal text-gray-700">(voor centrum-brede events)</span></p>
+                <div className="flex flex-wrap gap-2">
+                  {venues.map(v => (
+                    <button key={v.id} type="button"
+                      onClick={() => {
+                        const sel = form.deelnemende_venues;
+                        upd('deelnemende_venues', sel.includes(v.naam) ? sel.filter(n => n !== v.naam) : [...sel, v.naam]);
+                      }}
+                      className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${form.deelnemende_venues.includes(v.naam) ? 'bg-oranje border-oranje text-black' : 'border-[#333] text-gray-500 hover:border-oranje hover:text-oranje'}`}>
+                      {v.naam}
+                    </button>
+                  ))}
+                </div>
+                {form.deelnemende_venues.length > 0 && (
+                  <p className="text-xs text-gray-600">{form.deelnemende_venues.length} locatie{form.deelnemende_venues.length !== 1 ? 's' : ''} geselecteerd</p>
+                )}
+              </div>
+
+              {/* Extra content secties */}
+              <div className={SEC} style={{ backgroundColor: '#0d0d0d' }}>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Extra content secties</p>
+                  <button type="button"
+                    onClick={() => upd('extra_secties', [...form.extra_secties, { titel: '', tekst: '' }])}
+                    className="text-xs text-gray-500 border border-[#333] px-3 py-1 rounded-lg hover:border-oranje hover:text-oranje transition-colors">
+                    + Sectie toevoegen
+                  </button>
+                </div>
+                {form.extra_secties.map((sectie, i) => (
+                  <div key={i} className="space-y-2 border border-[#1e1e1e] rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <input value={sectie.titel} onChange={e => { const s=[...form.extra_secties]; s[i]={...s[i],titel:e.target.value}; upd('extra_secties',s); }}
+                        placeholder="Sectietitel (bijv. 'Programma')" className={INP + ' flex-1'} />
+                      {form.extra_secties.length > 1 && (
+                        <button type="button" onClick={() => { const s=[...form.extra_secties]; s.splice(i,1); upd('extra_secties',s); }}
+                          className="text-red-400 hover:text-red-300 text-xs px-2 py-2">✕</button>
+                      )}
+                    </div>
+                    <textarea value={sectie.tekst} onChange={e => { const s=[...form.extra_secties]; s[i]={...s[i],tekst:e.target.value}; upd('extra_secties',s); }}
+                      placeholder="Tekst van deze sectie..." rows={3}
+                      className="w-full bg-[#141414] border border-[#2a2a2a] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-oranje resize-none" />
+                  </div>
+                ))}
+              </div>
+
               {/* Publicatie */}
-              <div className="flex items-center gap-3 px-1">
-                <input type="checkbox" id="goedgekeurd" checked={form.goedgekeurd}
-                  onChange={e => upd('goedgekeurd', e.target.checked)} className="accent-oranje w-4 h-4" />
-                <label htmlFor="goedgekeurd" className="text-sm text-gray-400 cursor-pointer">Direct publiceren (goedgekeurd)</label>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1">
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" id="goedgekeurd" checked={form.goedgekeurd}
+                    onChange={e => upd('goedgekeurd', e.target.checked)} className="accent-oranje w-4 h-4" />
+                  <label htmlFor="goedgekeurd" className="text-sm text-gray-400 cursor-pointer">Direct publiceren (goedgekeurd)</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" id="hot" checked={form.hot}
+                    onChange={e => upd('hot', e.target.checked)} className="accent-oranje w-4 h-4" />
+                  <label htmlFor="hot" className="text-sm text-gray-400 cursor-pointer">🔥 Hot (uitgelicht)</label>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-1">
