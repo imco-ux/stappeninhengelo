@@ -316,12 +316,12 @@ export default function EventDetailPage() {
       <Header />
       {pixels}
 
-      {/* Poster bovenaan */}
-      <div className="relative w-full bg-[#0d0d0d] aspect-[4/5] max-h-[85vh] overflow-hidden">
+      {/* Poster bovenaan — padding-bottom truc voor betrouwbare 4:5 verhouding */}
+      <div className="relative w-full bg-[#0d0d0d] overflow-hidden" style={{ paddingBottom: '125%' }}>
         {event.poster_url ? (
-          <img src={event.poster_url} alt={event.title} className="w-full h-full object-cover" />
+          <img src={event.poster_url} alt={event.title} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1a0800 0%, #000 100%)' }}>
+          <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1a0800 0%, #000 100%)' }}>
             <img src="/images/logo-small.png" alt="" className="w-24 h-24 object-contain opacity-20" />
           </div>
         )}
