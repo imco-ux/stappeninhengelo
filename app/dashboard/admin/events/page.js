@@ -6,6 +6,7 @@ import AdminShell from '@/components/AdminShell';
 import { supabase } from '@/lib/supabase';
 
 const PlacesInput = dynamic(() => import('@/components/PlacesInput'), { ssr: false });
+const UnsplashPicker = dynamic(() => import('@/components/UnsplashPicker'), { ssr: false });
 
 const MAANDEN = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
 const TYPES = ['Feestcafé','Club Night','Karaoke','Live Muziek','Quiz','Borrel','Festival','Overig'];
@@ -512,11 +513,14 @@ export default function AdminEvents() {
                       : <svg width="24" height="24" fill="none" stroke="#444" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>}
                   </div>
                   <div className="space-y-2">
-                    <label className="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg border border-[#2a2a2a] text-gray-400 text-xs hover:border-oranje hover:text-oranje transition-colors w-fit">
-                      <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                      {posterFile ? posterFile.name : 'Kies afbeelding'}
-                      <input type="file" accept="image/*" onChange={handlePosterChange} className="hidden" />
-                    </label>
+                    <div className="flex gap-2 flex-wrap">
+                      <label className="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg border border-[#2a2a2a] text-gray-400 text-xs hover:border-oranje hover:text-oranje transition-colors">
+                        <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                        {posterFile ? posterFile.name : 'Upload'}
+                        <input type="file" accept="image/*" onChange={handlePosterChange} className="hidden" />
+                      </label>
+                      <UnsplashPicker zoekterm={form.title} onKies={url => { setPosterFile(null); setPosterPreview(url); }} />
+                    </div>
                     {posterPreview && (
                       <button type="button" onClick={() => { setPosterFile(null); setPosterPreview(null); }} className="text-xs text-red-400 hover:text-red-300">
                         Verwijder poster

@@ -6,6 +6,7 @@ import AdminShell from '@/components/AdminShell';
 import { supabase } from '@/lib/supabase';
 
 const PlacesInput = dynamic(() => import('@/components/PlacesInput'), { ssr: false });
+const UnsplashPicker = dynamic(() => import('@/components/UnsplashPicker'), { ssr: false });
 
 const TYPES = [
   // Drank
@@ -306,12 +307,21 @@ export default function AdminLocaties() {
                                   className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white text-[10px] flex items-center justify-center hover:bg-red-600">✕</button>
                               </>
                             ) : (
-                              <label className="w-full h-full flex items-center justify-center cursor-pointer hover:bg-[#141414] transition-colors">
-                                {fotoBezig[i]
-                                  ? <div className="w-4 h-4 border-2 border-oranje border-t-transparent rounded-full animate-spin" />
-                                  : <span className="text-gray-600 text-lg">+</span>}
-                                <input type="file" accept="image/*" onChange={e => e.target.files?.[0] && uploadFoto(e.target.files[0], i)} className="hidden" disabled={fotoBezig[i]} />
-                              </label>
+                              <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                                {fotoBezig[i] ? (
+                                  <div className="w-4 h-4 border-2 border-oranje border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <>
+                                    <label className="cursor-pointer text-gray-600 hover:text-oranje transition-colors text-lg leading-none">
+                                      +
+                                      <input type="file" accept="image/*" onChange={e => e.target.files?.[0] && uploadFoto(e.target.files[0], i)} className="hidden" />
+                                    </label>
+                                    <div onClick={e => e.stopPropagation()}>
+                                      <UnsplashPicker zoekterm={form.naam} onKies={url => { const f=[...form.fotos]; f[i]=url; upd('fotos',f); }} />
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </div>
                         );

@@ -5,7 +5,6 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 
-// Genereer een unieke gradient kleur per brondomein
 function bronKleur(bron) {
   const kleuren = [
     ['#1a0a00','#3d1f00'], ['#001a0a','#003d1f'], ['#00101a','#00263d'],
@@ -13,6 +12,102 @@ function bronKleur(bron) {
   ];
   const idx = (bron || '').split('').reduce((a,c) => a + c.charCodeAt(0), 0) % kleuren.length;
   return kleuren[idx];
+}
+
+function ArtikelModal({ item, onSluit }) {
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onSluit(); }
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [onSluit]);
+
+  const datum = item.created_at
+    ? new Date(item.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null;
+
+  const tagIcon = item.tagged?.type === 'venue' ? '📍'
+    : item.tagged?.type === 'centrumbreed' ? '🏙️'
+    : item.tagged?.type === 'event' ? '🎉' : null;
+
+  const tagHref = item.tagged?.type === 'venue' ? `/locaties/${item.tagged.slug}`
+    : item.tagged?.type === 'centrumbreed' || item.tagged?.type === 'event' ? `/events/${item.tagged.slug}`
+    : null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
+      onClick={onSluit}
+    >
+      <div
+        className="relative w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col"
+        style={{ backgroundColor: '#141414', maxHeight: '92vh' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Sluit knop */}
+        <button
+          onClick={onSluit}
+          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+          style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+        >
+          ✕
+        </button>
+
+        {/* Foto */}
+        {item.foto && (
+          <div className="w-full flex-shrink-0 overflow-hidden" style={{ height: 220 }}>
+            <img src={item.foto} alt={item.titel} className="w-full h-full object-cover" />
+          </div>
+        )}
+
+        {/* Inhoud */}
+        <div className="overflow-y-auto flex-1 p-6 space-y-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            {item.categorie && (
+              <span className="text-xs font-bold uppercase px-2 py-1 rounded text-black"
+                style={{ backgroundColor: '#F27A00' }}>
+                {item.categorie}
+              </span>
+            )}
+            {datum && <span className="text-xs text-gray-600">{datum}</span>}
+          </div>
+
+          <h2 className="text-3xl font-black uppercase leading-tight"
+            style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
+            {item.titel}
+          </h2>
+
+          {item.subtitel && (
+            <p className="text-gray-400 text-base leading-relaxed font-medium">{item.subtitel}</p>
+          )}
+
+          {item.inhoud && (
+            <div className="text-gray-300 text-sm leading-relaxed whitespace-pre-line border-t border-[#252525] pt-4">
+              {item.inhoud}
+            </div>
+          )}
+
+          {/* Tag koppeling */}
+          {item.tagged?.naam && tagHref && (
+            <a href={tagHref}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl border border-oranje/30 hover:border-oranje hover:bg-oranje/5 transition-colors group mt-2">
+              <span className="text-lg">{tagIcon}</span>
+              <div>
+                <p className="text-[10px] font-bold uppercase text-gray-600 tracking-widest">
+                  {item.tagged.type === 'venue' ? 'Locatie' : item.tagged.type === 'centrumbreed' ? 'Centrumbreed event' : 'Event'}
+                </p>
+                <p className="text-sm font-bold text-white group-hover:text-oranje transition-colors">{item.tagged.naam} →</p>
+              </div>
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function GoogleNieuwsKaart({ item }) {
@@ -25,12 +120,8 @@ function GoogleNieuwsKaart({ item }) {
       className="bg-[#141414] rounded-xl border border-[#252525] hover:border-oranje transition-colors overflow-hidden group flex flex-col">
       <div className="relative overflow-hidden border-b border-[#1e1e1e]" style={{ height: 150 }}>
         {toonFoto ? (
-          <img
-            src={item.foto}
-            alt={item.titel}
-            onError={() => setFotoFout(true)}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
+          <img src={item.foto} alt={item.titel} onError={() => setFotoFout(true)}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2"
             style={{ background: `linear-gradient(135deg, ${gc1} 0%, ${gc2} 100%)` }}>
@@ -59,29 +150,21 @@ function GoogleNieuwsKaart({ item }) {
 }
 
 export default function NieuwsPage() {
-  const [handmatig, setHandmatig] = useState([]);
-  const [google, setGoogle]       = useState([]);
-  const [laden, setLaden]         = useState(true);
+  const [handmatig, setHandmatig]     = useState([]);
+  const [google, setGoogle]           = useState([]);
+  const [laden, setLaden]             = useState(true);
   const [googleLaden, setGoogleLaden] = useState(true);
-  const [tab, setTab]             = useState('alles'); // 'alles' | 'google'
+  const [tab, setTab]                 = useState('alles');
+  const [actief, setActief]           = useState(null);
 
   useEffect(() => {
-    supabase
-      .from('nieuws')
-      .select('*')
-      .eq('gepubliceerd', true)
+    supabase.from('nieuws').select('*').eq('gepubliceerd', true)
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setHandmatig(data || []);
-        setLaden(false);
-      });
+      .then(({ data }) => { setHandmatig(data || []); setLaden(false); });
 
     fetch('/api/google-nieuws')
       .then(r => r.json())
-      .then(d => {
-        setGoogle(d.artikelen || []);
-        setGoogleLaden(false);
-      })
+      .then(d => { setGoogle(d.artikelen || []); setGoogleLaden(false); })
       .catch(() => setGoogleLaden(false));
   }, []);
 
@@ -129,7 +212,8 @@ export default function NieuwsPage() {
               ) : handmatig.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
                   {handmatig.map(item => (
-                    <article key={item.id} className="bg-[#141414] rounded-xl border border-[#252525] hover:border-oranje transition-colors overflow-hidden group flex flex-col">
+                    <button key={item.id} onClick={() => setActief(item)}
+                      className="text-left bg-[#141414] rounded-xl border border-[#252525] hover:border-oranje transition-colors overflow-hidden group flex flex-col w-full">
                       <div className="relative overflow-hidden border-b border-[#1e1e1e]" style={{ height: 180 }}>
                         {item.foto ? (
                           <img src={item.foto} alt={item.titel} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -139,19 +223,29 @@ export default function NieuwsPage() {
                           </div>
                         )}
                         {item.categorie && (
-                          <span className="absolute top-3 left-3 text-xs font-bold uppercase px-2 py-1 rounded" style={{ backgroundColor: '#F27A00', color: '#000' }}>
+                          <span className="absolute top-3 left-3 text-xs font-bold uppercase px-2 py-1 rounded text-black"
+                            style={{ backgroundColor: '#F27A00' }}>
                             {item.categorie}
+                          </span>
+                        )}
+                        {item.tagged?.naam && (
+                          <span className="absolute top-3 right-3 text-[10px] font-bold px-2 py-1 rounded-full border border-oranje/30 text-oranje/80 bg-black/60">
+                            {item.tagged.type === 'venue' ? '📍' : item.tagged.type === 'centrumbreed' ? '🏙️' : '🎉'} {item.tagged.naam}
                           </span>
                         )}
                       </div>
                       <div className="p-5 flex flex-col gap-2 flex-1">
-                        <p className="text-xs text-gray-600">{new Date(item.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                        <h3 className="text-xl font-black uppercase leading-tight group-hover:text-oranje transition-colors" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
+                        <p className="text-xs text-gray-600">
+                          {new Date(item.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </p>
+                        <h3 className="text-xl font-black uppercase leading-tight group-hover:text-oranje transition-colors"
+                          style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
                           {item.titel}
                         </h3>
-                        {item.subtitel && <p className="text-sm text-gray-500 line-clamp-3 flex-1">{item.subtitel}</p>}
+                        {item.subtitel && <p className="text-sm text-gray-500 line-clamp-2 flex-1">{item.subtitel}</p>}
+                        <span className="text-oranje text-xs font-bold pt-1">Lees meer →</span>
                       </div>
-                    </article>
+                    </button>
                   ))}
                 </div>
               ) : tab === 'uitgelicht' ? (
@@ -180,9 +274,7 @@ export default function NieuwsPage() {
                 <div className="text-center py-10 text-gray-600 text-sm">Geen nieuws gevonden.</div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {google.map((item, i) => (
-                    <GoogleNieuwsKaart key={i} item={item} />
-                  ))}
+                  {google.map((item, i) => <GoogleNieuwsKaart key={i} item={item} />)}
                 </div>
               )}
             </>
@@ -192,6 +284,9 @@ export default function NieuwsPage() {
       </section>
 
       <Footer />
+
+      {/* Artikel popup */}
+      {actief && <ArtikelModal item={actief} onSluit={() => setActief(null)} />}
     </main>
   );
 }

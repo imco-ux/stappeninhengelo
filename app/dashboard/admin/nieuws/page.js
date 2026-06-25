@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import AdminShell from '@/components/AdminShell';
 import { supabase } from '@/lib/supabase';
+
+const UnsplashPicker = dynamic(() => import('@/components/UnsplashPicker'), { ssr: false });
 
 const CATEGORIEEN = ['Nieuws', 'Feature', 'Events', 'Tip', 'Aanbieding'];
 const catKleur = {
@@ -13,31 +16,39 @@ const catKleur = {
   Aanbieding: 'bg-yellow-950/50 text-yellow-400',
 };
 
-const leegForm = { titel: '', subtitel: '', inhoud: '', foto: '', categorie: 'Nieuws', gepubliceerd: false };
+const leegForm = {
+  titel: '', subtitel: '', inhoud: '', foto: '',
+  categorie: 'Nieuws', gepubliceerd: true,
+  tagged_type: '', tagged_naam: '', tagged_slug: '',
+};
 const INP = 'w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-oranje transition-colors';
 
 export default function AdminNieuws() {
-  const [tab, setTab]             = useState('eigen'); // 'eigen' | 'google'
+  const [tab, setTab]             = useState('eigen');
   const [items, setItems]         = useState([]);
   const [laden, setLaden]         = useState(true);
   const [form, setForm]           = useState(leegForm);
   const [bewerkId, setBewerkId]   = useState(null);
   const [toonForm, setToonForm]   = useState(false);
-  const [opslaan, setOpslaan]     = useState(false);
+  const [bezig, setBezig]         = useState(false);
   const [fotoBezig, setFotoBezig] = useState(false);
   const [melding, setMelding]     = useState('');
+  const [foutMelding, setFoutMelding] = useState('');
+
+  const [venues, setVenues]       = useState([]);
+  const [events, setEvents]       = useState([]);
 
   // Google Nieuws
   const [google, setGoogle]           = useState([]);
   const [googleLaden, setGoogleLaden] = useState(false);
   const [geblokkeerd, setGeblokkeerd] = useState([]);
 
-  useEffect(() => { laad(); laadGeblokkeerd(); }, []);
+  useEffect(() => { laad(); laadVenuesEvents(); laadGeblokkeerd(); }, []);
 
   async function laad() {
     setLaden(true);
     const grens = new Date();
-    grens.setDate(grens.getDate() - 21);
+    grens.setDate(grens.getDate() - 60);
     const { data } = await supabase.from('nieuws').select('*')
       .gte('created_at', grens.toISOString())
       .order('created_at', { ascending: false });
@@ -45,10 +56,19 @@ export default function AdminNieuws() {
     setLaden(false);
   }
 
+  async function laadVenuesEvents() {
+    const [venRes, evRes] = await Promise.all([
+      supabase.from('venues').select('id, naam').eq('actief', true).order('naam'),
+      supabase.from('events').select('id, title, slug, is_centrumbreed').eq('goedgekeurd', true)
+        .gte('datum', new Date().toISOString().split('T')[0]).order('datum').limit(50),
+    ]);
+    setVenues(venRes.data || []);
+    setEvents(evRes.data || []);
+  }
+
   function laadGeblokkeerd() {
     try {
-      const opgeslagen = JSON.parse(localStorage.getItem('nieuws_geblokkeerd') || '[]');
-      setGeblokkeerd(opgeslagen);
+      setGeblokkeerd(JSON.parse(localStorage.getItem('nieuws_geblokkeerd') || '[]'));
     } catch {}
   }
 
@@ -67,14 +87,24 @@ export default function AdminNieuws() {
       inhoud: item.inhoud || '',
       foto: item.foto || '',
       categorie: item.categorie || 'Nieuws',
-      gepubliceerd: item.gepubliceerd ?? false,
+      gepubliceerd: item.gepubliceerd ?? true,
+      tagged_type: item.tagged?.type || '',
+      tagged_naam: item.tagged?.naam || '',
+      tagged_slug: item.tagged?.slug || '',
     });
     setBewerkId(item.id);
+    setFoutMelding('');
     setToonForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function nieuw() { setForm(leegForm); setBewerkId(null); setToonForm(true); }
+  function nieuw() {
+    setForm(leegForm);
+    setBewerkId(null);
+    setFoutMelding('');
+    setToonForm(true);
+  }
+
   function upd(v, val) { setForm(f => ({ ...f, [v]: val })); }
 
   async function uploadFoto(e) {
@@ -87,22 +117,55 @@ export default function AdminNieuws() {
     if (!error) {
       const { data } = supabase.storage.from('venue-fotos').getPublicUrl(naam);
       upd('foto', data.publicUrl);
+    } else {
+      toonMelding('Upload mislukt: ' + error.message, true);
     }
     setFotoBezig(false);
   }
 
+  function kiesTag(type, naam, slug) {
+    upd('tagged_type', type);
+    upd('tagged_naam', naam);
+    upd('tagged_slug', slug);
+  }
+
   async function opslaanForm(e) {
     e.preventDefault();
-    setOpslaan(true);
-    const payload = { ...form, updated_at: new Date().toISOString() };
+    setBezig(true);
+    setFoutMelding('');
+
+    const tagged = form.tagged_type ? {
+      type: form.tagged_type,
+      naam: form.tagged_naam,
+      slug: form.tagged_slug,
+    } : null;
+
+    const payload = {
+      titel: form.titel,
+      subtitel: form.subtitel,
+      inhoud: form.inhoud,
+      foto: form.foto || null,
+      categorie: form.categorie,
+      gepubliceerd: form.gepubliceerd,
+      tagged,
+      updated_at: new Date().toISOString(),
+    };
+
+    let error;
     if (bewerkId) {
-      await supabase.from('nieuws').update(payload).eq('id', bewerkId);
-      toonMelding('Bericht opgeslagen ✓');
+      ({ error } = await supabase.from('nieuws').update(payload).eq('id', bewerkId));
     } else {
-      await supabase.from('nieuws').insert(payload);
-      toonMelding('Bericht aangemaakt ✓');
+      ({ error } = await supabase.from('nieuws').insert(payload));
     }
-    setOpslaan(false);
+
+    if (error) {
+      setFoutMelding('Fout bij opslaan: ' + error.message);
+      setBezig(false);
+      return;
+    }
+
+    toonMelding(bewerkId ? 'Bericht opgeslagen ✓' : 'Bericht aangemaakt ✓');
+    setBezig(false);
     setToonForm(false);
     laad();
   }
@@ -116,32 +179,37 @@ export default function AdminNieuws() {
 
   async function togglePubliceer(item) {
     const nieuwStatus = !item.gepubliceerd;
-    await supabase.from('nieuws').update({ gepubliceerd: nieuwStatus }).eq('id', item.id);
+    const { error } = await supabase.from('nieuws').update({ gepubliceerd: nieuwStatus }).eq('id', item.id);
+    if (error) { toonMelding('Fout: ' + error.message, true); return; }
     setItems(its => its.map(x => x.id === item.id ? { ...x, gepubliceerd: nieuwStatus } : x));
     toonMelding(nieuwStatus ? 'Bericht gepubliceerd ✓' : 'Bericht offline gehaald');
   }
 
   function blokkeerArtikel(artikel) {
-    const nieuw = [...geblokkeerd, artikel.link];
-    setGeblokkeerd(nieuw);
-    localStorage.setItem('nieuws_geblokkeerd', JSON.stringify(nieuw));
+    const n = [...geblokkeerd, artikel.link];
+    setGeblokkeerd(n);
+    localStorage.setItem('nieuws_geblokkeerd', JSON.stringify(n));
     toonMelding('Artikel verborgen ✓');
   }
 
   function deblokkeerArtikel(link) {
-    const nieuw = geblokkeerd.filter(l => l !== link);
-    setGeblokkeerd(nieuw);
-    localStorage.setItem('nieuws_geblokkeerd', JSON.stringify(nieuw));
+    const n = geblokkeerd.filter(l => l !== link);
+    setGeblokkeerd(n);
+    localStorage.setItem('nieuws_geblokkeerd', JSON.stringify(n));
     toonMelding('Artikel weer zichtbaar');
   }
 
-  function toonMelding(t) { setMelding(t); setTimeout(() => setMelding(''), 3000); }
+  function toonMelding(t, fout = false) {
+    if (fout) setFoutMelding(t);
+    else { setMelding(t); setTimeout(() => setMelding(''), 3000); }
+  }
+
+  const tagLabel = form.tagged_type ? `${form.tagged_type === 'venue' ? '📍' : form.tagged_type === 'centrumbreed' ? '🏙️' : '🎉'} ${form.tagged_naam}` : null;
 
   return (
     <AdminShell>
       <div className="px-8 py-8 max-w-5xl">
 
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-4xl font-black uppercase" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
@@ -166,17 +234,14 @@ export default function AdminNieuws() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-[#1e1e1e] pb-4">
-          <button onClick={() => setTab('eigen')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${tab === 'eigen' ? 'bg-oranje text-black' : 'text-gray-500 border border-[#2a2a2a] hover:text-white'}`}>
-            ✏️ Eigen berichten
-          </button>
-          <button onClick={() => { setTab('google'); if (!google.length) laadGoogle(); }}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${tab === 'google' ? 'bg-oranje text-black' : 'text-gray-500 border border-[#2a2a2a] hover:text-white'}`}>
-            📰 Google Nieuws
-          </button>
+          {[['eigen','✏️ Eigen berichten'],['google','📰 Google Nieuws']].map(([v,l]) => (
+            <button key={v} onClick={() => { setTab(v); if (v === 'google' && !google.length) laadGoogle(); }}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${tab === v ? 'bg-oranje text-black' : 'text-gray-500 border border-[#2a2a2a] hover:text-white'}`}>
+              {l}
+            </button>
+          ))}
         </div>
 
-        {/* === EIGEN BERICHTEN === */}
         {tab === 'eigen' && (
           <>
             {/* Formulier */}
@@ -189,8 +254,13 @@ export default function AdminNieuws() {
                   <button onClick={() => setToonForm(false)} className="text-gray-600 hover:text-white">✕</button>
                 </div>
 
+                {foutMelding && (
+                  <div className="mb-4 bg-red-950/30 border border-red-800/40 rounded-lg px-4 py-3 text-red-400 text-sm">{foutMelding}</div>
+                )}
+
                 <form onSubmit={opslaanForm} className="space-y-5">
-                  {/* Foto upload */}
+
+                  {/* Foto */}
                   <div>
                     <label className="text-xs font-bold uppercase text-gray-500 block mb-2">Foto</label>
                     <div className="flex items-start gap-4">
@@ -199,21 +269,22 @@ export default function AdminNieuws() {
                           ? <img src={form.foto} alt="" className="w-full h-full object-cover" />
                           : <span className="text-gray-700 text-xs text-center px-2">Geen foto</span>}
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-lg border border-[#2a2a2a] text-sm text-gray-300 hover:border-oranje hover:text-oranje transition-colors">
-                          {fotoBezig
-                            ? <><div className="w-4 h-4 border-2 border-oranje border-t-transparent rounded-full animate-spin" />Uploaden...</>
-                            : <><span>↑</span> Foto uploaden</>}
-                          <input type="file" accept="image/*" onChange={uploadFoto} className="hidden" disabled={fotoBezig} />
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <input value={form.foto} onChange={e => upd('foto', e.target.value)}
-                            placeholder="Of plak een URL..."
-                            className="flex-1 bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-oranje" />
+                      <div className="flex flex-col gap-2 flex-1">
+                        <div className="flex gap-2 flex-wrap">
+                          <label className="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg border border-[#2a2a2a] text-xs text-gray-300 hover:border-oranje hover:text-oranje transition-colors">
+                            {fotoBezig
+                              ? <><div className="w-3 h-3 border-2 border-oranje border-t-transparent rounded-full animate-spin" />Uploaden...</>
+                              : <><span>↑</span> Upload</>}
+                            <input type="file" accept="image/*" onChange={uploadFoto} className="hidden" disabled={fotoBezig} />
+                          </label>
+                          <UnsplashPicker zoekterm={form.titel} onKies={url => upd('foto', url)} />
                           {form.foto && (
-                            <button type="button" onClick={() => upd('foto', '')} className="text-xs text-red-400 hover:text-red-300 flex-shrink-0">Verwijder</button>
+                            <button type="button" onClick={() => upd('foto', '')} className="text-xs text-red-400 hover:text-red-300">Verwijder</button>
                           )}
                         </div>
+                        <input value={form.foto} onChange={e => upd('foto', e.target.value)}
+                          placeholder="Of plak een URL..."
+                          className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-oranje" />
                       </div>
                     </div>
                   </div>
@@ -241,21 +312,84 @@ export default function AdminNieuws() {
                     <textarea value={form.inhoud} onChange={e => upd('inhoud', e.target.value)} rows={6} className={INP + ' resize-none'} />
                   </div>
 
-                  <div className="flex items-center gap-3 pt-1">
+                  {/* Taggen */}
+                  <div className="rounded-xl border border-[#2a2a2a] p-4 space-y-3" style={{ backgroundColor: '#0d0d0d' }}>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Koppel aan locatie of event</p>
+                      {form.tagged_type && (
+                        <button type="button" onClick={() => { upd('tagged_type',''); upd('tagged_naam',''); upd('tagged_slug',''); }}
+                          className="text-xs text-red-400 hover:text-red-300">Verwijder koppeling</button>
+                      )}
+                    </div>
+                    {tagLabel && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-oranje/10 border border-oranje/30">
+                        <span className="text-sm text-oranje font-bold">{tagLabel}</span>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-3 gap-2">
+                      {/* Venues */}
+                      <div>
+                        <p className="text-[10px] text-gray-600 uppercase mb-1.5">📍 Locatie</p>
+                        <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                          {venues.map(v => {
+                            const slug = v.naam.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+                            return (
+                              <button key={v.id} type="button"
+                                onClick={() => kiesTag('venue', v.naam, slug)}
+                                className={`w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors ${form.tagged_type === 'venue' && form.tagged_naam === v.naam ? 'bg-oranje text-black font-bold' : 'text-gray-400 hover:bg-[#1e1e1e] hover:text-white'}`}>
+                                {v.naam}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {/* Events */}
+                      <div>
+                        <p className="text-[10px] text-gray-600 uppercase mb-1.5">🎉 Event</p>
+                        <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                          {events.filter(e => !e.is_centrumbreed).map(e => (
+                            <button key={e.id} type="button"
+                              onClick={() => kiesTag('event', e.title, e.slug)}
+                              className={`w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors ${form.tagged_type === 'event' && form.tagged_naam === e.title ? 'bg-oranje text-black font-bold' : 'text-gray-400 hover:bg-[#1e1e1e] hover:text-white'}`}>
+                              {e.title}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Centrumbreed events */}
+                      <div>
+                        <p className="text-[10px] text-gray-600 uppercase mb-1.5">🏙️ Centrumbreed</p>
+                        <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                          {events.filter(e => e.is_centrumbreed).map(e => (
+                            <button key={e.id} type="button"
+                              onClick={() => kiesTag('centrumbreed', e.title, e.slug)}
+                              className={`w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors ${form.tagged_type === 'centrumbreed' && form.tagged_naam === e.title ? 'bg-oranje text-black font-bold' : 'text-gray-400 hover:bg-[#1e1e1e] hover:text-white'}`}>
+                              {e.title}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Publicatie */}
+                  <div className="flex items-center gap-3">
                     <button type="button" onClick={() => upd('gepubliceerd', !form.gepubliceerd)}
                       className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${form.gepubliceerd ? 'bg-green-600' : 'bg-[#333]'}`}>
                       <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${form.gepubliceerd ? 'translate-x-5' : ''}`} />
                     </button>
                     <span className="text-sm text-gray-400">
-                      {form.gepubliceerd ? <span className="text-green-400 font-semibold">Live — zichtbaar op de site</span> : 'Concept — niet zichtbaar'}
+                      {form.gepubliceerd
+                        ? <span className="text-green-400 font-semibold">Live — zichtbaar op de site</span>
+                        : 'Concept — niet zichtbaar'}
                     </span>
                   </div>
 
                   <div className="flex gap-3 pt-2 border-t border-[#1e1e1e]">
-                    <button type="submit" disabled={opslaan}
+                    <button type="submit" disabled={bezig}
                       className="px-6 py-2.5 rounded-lg font-black uppercase text-sm text-black disabled:opacity-50"
                       style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}>
-                      {opslaan ? 'Opslaan...' : bewerkId ? 'Wijzigingen opslaan' : 'Aanmaken'}
+                      {bezig ? 'Opslaan...' : bewerkId ? 'Wijzigingen opslaan' : 'Aanmaken & publiceren'}
                     </button>
                     <button type="button" onClick={() => setToonForm(false)}
                       className="px-6 py-2.5 rounded-lg text-sm text-gray-400 border border-[#333] hover:text-white">
@@ -266,7 +400,7 @@ export default function AdminNieuws() {
               </div>
             )}
 
-            {/* Lijst eigen berichten */}
+            {/* Lijst */}
             {laden ? (
               <div className="space-y-3">
                 {[1,2,3].map(i => <div key={i} className="h-24 rounded-xl bg-[#141414] animate-pulse" />)}
@@ -296,6 +430,11 @@ export default function AdminNieuws() {
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.gepubliceerd ? 'bg-green-950/50 text-green-400' : 'bg-gray-900 text-gray-600'}`}>
                           {item.gepubliceerd ? '● Live' : '○ Concept'}
                         </span>
+                        {item.tagged?.naam && (
+                          <span className="text-[10px] text-oranje/70 border border-oranje/20 px-2 py-0.5 rounded-full">
+                            {item.tagged.type === 'venue' ? '📍' : item.tagged.type === 'centrumbreed' ? '🏙️' : '🎉'} {item.tagged.naam}
+                          </span>
+                        )}
                         <span className="text-[10px] text-gray-700 ml-auto">
                           {new Date(item.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
@@ -325,61 +464,31 @@ export default function AdminNieuws() {
           </>
         )}
 
-        {/* === GOOGLE NIEUWS === */}
+        {/* Google Nieuws tab */}
         {tab === 'google' && (
           <>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-xs text-gray-600">
-                Artikelen automatisch opgehaald via Google Nieuws. Je kunt artikelen verbergen zodat ze niet meer op de site verschijnen.
-              </p>
+              <p className="text-xs text-gray-600">Automatisch opgehaald via Google Nieuws. Verberg artikelen die niet relevant zijn.</p>
               <button onClick={laadGoogle}
                 className="px-3 py-1.5 rounded-lg text-xs font-bold border border-[#2a2a2a] text-gray-400 hover:text-white hover:border-oranje transition-colors flex-shrink-0 ml-4">
                 ↻ Vernieuwen
               </button>
             </div>
-
-            {/* Geblokkeerde artikelen */}
-            {geblokkeerd.length > 0 && (
-              <div className="mb-5 rounded-xl border border-red-900/30 p-4" style={{ backgroundColor: '#1a0808' }}>
-                <p className="text-xs font-bold uppercase text-red-500 mb-3">{geblokkeerd.length} verborgen artikel{geblokkeerd.length > 1 ? 'en' : ''}</p>
-                <div className="space-y-2">
-                  {google.filter(a => geblokkeerd.includes(a.link)).map((a, i) => (
-                    <div key={i} className="flex items-center justify-between gap-3">
-                      <p className="text-xs text-gray-600 truncate flex-1">{a.titel}</p>
-                      <button onClick={() => deblokkeerArtikel(a.link)}
-                        className="text-xs text-green-500 hover:text-green-400 flex-shrink-0">
-                        Weer tonen
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {googleLaden ? (
-              <div className="space-y-3">
-                {[1,2,3,4,5].map(i => <div key={i} className="h-24 rounded-xl bg-[#141414] animate-pulse" />)}
-              </div>
+              <div className="space-y-3">{[1,2,3,4,5].map(i => <div key={i} className="h-24 rounded-xl bg-[#141414] animate-pulse" />)}</div>
             ) : google.length === 0 ? (
               <div className="rounded-xl border border-[#1e1e1e] p-16 text-center text-gray-600 text-sm" style={{ backgroundColor: '#141414' }}>
-                Klik op "Vernieuwen" om de Google Nieuws artikelen te laden.
+                Klik op "Vernieuwen" om artikelen te laden.
               </div>
             ) : (
               <div className="space-y-3">
                 {google.map((item, i) => {
                   const isGeblokkeerd = geblokkeerd.includes(item.link);
                   return (
-                    <div key={i}
-                      className={`rounded-xl border overflow-hidden flex transition-opacity ${isGeblokkeerd ? 'opacity-40 border-red-900/30' : 'border-[#1e1e1e]'}`}
-                      style={{ backgroundColor: '#141414' }}>
-                      {/* Foto */}
+                    <div key={i} className={`rounded-xl border overflow-hidden flex ${isGeblokkeerd ? 'opacity-40 border-red-900/30' : 'border-[#1e1e1e]'}`} style={{ backgroundColor: '#141414' }}>
                       <div className="w-28 h-24 flex-shrink-0 bg-[#0d0d0d] flex items-center justify-center overflow-hidden border-r border-[#1e1e1e]">
-                        {item.foto
-                          ? <img src={item.foto} alt="" className="w-full h-full object-cover" onError={e => e.target.style.display='none'} />
-                          : <span className="text-gray-700 text-[10px] text-center px-2">{item.bron}</span>}
+                        {item.foto ? <img src={item.foto} alt="" className="w-full h-full object-cover" onError={e => e.target.style.display='none'} /> : <span className="text-gray-700 text-[10px] text-center px-2">{item.bron}</span>}
                       </div>
-
-                      {/* Info */}
                       <div className="flex-1 min-w-0 px-4 py-3 flex flex-col justify-center gap-1">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-bold text-gray-600 bg-[#1e1e1e] px-2 py-0.5 rounded-full">{item.bron}</span>
@@ -388,21 +497,17 @@ export default function AdminNieuws() {
                         </div>
                         <p className="font-bold text-white text-sm line-clamp-2 leading-snug">{item.titel}</p>
                       </div>
-
-                      {/* Acties */}
                       <div className="flex flex-col justify-center gap-1.5 px-4 flex-shrink-0 border-l border-[#1e1e1e]">
                         <a href={item.link} target="_blank" rel="noopener noreferrer"
                           className="px-4 py-1.5 rounded-lg text-xs font-bold text-gray-400 border border-[#2a2a2a] hover:text-white hover:border-oranje transition-colors text-center">
                           Bekijk ↗
                         </a>
                         {isGeblokkeerd ? (
-                          <button onClick={() => deblokkeerArtikel(item.link)}
-                            className="px-4 py-1.5 rounded-lg text-xs font-bold border border-green-900/40 text-green-400 hover:bg-green-950/30 transition-colors">
+                          <button onClick={() => deblokkeerArtikel(item.link)} className="px-4 py-1.5 rounded-lg text-xs font-bold border border-green-900/40 text-green-400 hover:bg-green-950/30 transition-colors">
                             Toon weer
                           </button>
                         ) : (
-                          <button onClick={() => blokkeerArtikel(item)}
-                            className="px-4 py-1.5 rounded-lg text-xs font-bold border border-red-900/40 text-red-400 hover:bg-red-950/30 transition-colors">
+                          <button onClick={() => blokkeerArtikel(item)} className="px-4 py-1.5 rounded-lg text-xs font-bold border border-red-900/40 text-red-400 hover:bg-red-950/30 transition-colors">
                             Verbergen
                           </button>
                         )}
@@ -414,7 +519,6 @@ export default function AdminNieuws() {
             )}
           </>
         )}
-
       </div>
     </AdminShell>
   );
