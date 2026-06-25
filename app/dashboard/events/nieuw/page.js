@@ -26,6 +26,7 @@ export default function NieuwEventPage() {
   const [alleVenues, setAlleVenues] = useState([]);
   const [toonVenueLijst, setToonVenueLijst] = useState(false);
   const [posterBezig, setPosterBezig] = useState(false);
+  const [centrumEvents, setCentrumEvents] = useState([]);
 
   const [form, setForm] = useState({
     title: '', type: 'Club Night', datum: '',
@@ -33,6 +34,7 @@ export default function NieuwEventPage() {
     prijs: 'Gratis', prijs_bedrag: '', leeftijd: '18+',
     venue_naam: '', adres: '', omschrijving: '',
     poster_url: '',
+    centrumbreed_id: '',
     // Extra info
     artiesten: '',
     verwacht_bezoekers: '',
@@ -66,6 +68,9 @@ export default function NieuwEventPage() {
   useEffect(() => {
     supabase.from('venues').select('id, naam, adres, logo_url').order('naam')
       .then(({ data }) => setAlleVenues(data || []));
+    const vandaag = new Date().toISOString().split('T')[0];
+    supabase.from('events').select('id, title, datum').eq('is_centrumbreed', true).eq('goedgekeurd', true).gte('datum', vandaag).order('datum')
+      .then(({ data }) => setCentrumEvents(data || []));
   }, []);
 
   // Sync actie datums wanneer event datum wijzigt
@@ -164,6 +169,8 @@ export default function NieuwEventPage() {
       goedgekeurd:  false,
       gemaakt_door: user.email,
       slug,
+      centrumbreed_id: form.centrumbreed_id || null,
+      centrumbreed_link_goedgekeurd: false,
     }).select('id').single();
 
     if (error) {
@@ -503,6 +510,21 @@ export default function NieuwEventPage() {
               </div>
             </div>
           </div>
+
+          {/* ── Koppelen aan centrumbreed event ── */}
+          {centrumEvents.length > 0 && (
+            <div className="rounded-xl border border-oranje/20 p-6 space-y-3" style={{ backgroundColor: '#141414' }}>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-600">🏙️ Koppelen aan centrumbreed evenement <span className="normal-case font-normal text-gray-700">(optioneel)</span></p>
+              <p className="text-xs text-gray-600">Wil je dit event koppelen aan een groter, centrum-breed evenement? De admin moet de koppeling dan goedkeuren.</p>
+              <select value={form.centrumbreed_id} onChange={e => update('centrumbreed_id', e.target.value)}
+                className={INP}>
+                <option value="">— Niet koppelen —</option>
+                {centrumEvents.map(ce => (
+                  <option key={ce.id} value={ce.id}>{ce.title} ({ce.datum})</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* ── Eigen knop ── */}
           <div className="rounded-xl border border-[#1e1e1e] p-6 space-y-4" style={{ backgroundColor: '#141414' }}>

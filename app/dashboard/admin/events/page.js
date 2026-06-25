@@ -85,16 +85,33 @@ function MultiChips({ opties, gekozen, onChange, eigenWaarde, setEigenWaarde, pl
   );
 }
 
+const KNOP_KLEUREN = [
+  { label: 'Oranje', value: '#F27A00', tekst: '#000' },
+  { label: 'Wit', value: '#FFFFFF', tekst: '#000' },
+  { label: 'Groen', value: '#22c55e', tekst: '#000' },
+  { label: 'Paars', value: '#a855f7', tekst: '#fff' },
+  { label: 'Rood', value: '#ef4444', tekst: '#fff' },
+  { label: 'Blauw', value: '#3b82f6', tekst: '#fff' },
+  { label: 'Zwart', value: '#1a1a1a', tekst: '#fff' },
+  { label: 'Transparant', value: 'transparent', tekst: '#F27A00' },
+];
+
+const leegKnop = { label: '', url: '', kleur: '#F27A00', tekst: '#000' };
+
 const leegForm = {
   title: '', type: 'Club Night', datum: '', tijd_start: '22:00', tijd_eind: '04:00',
   prijs: 'Gratis', prijs_bedrag: '', leeftijd: '18+', adres: '', omschrijving: '',
   ticket_url: '', ticket_shortcode: '', venue_naam: '', goedgekeurd: true, hot: false,
-  knop_label: '', knop_url: '', meta_pixel_id: '', tiktok_pixel_id: '',
+  is_centrumbreed: false,
+  meta_pixel_id: '', tiktok_pixel_id: '',
   // extra_info velden
   artiesten: '', verwacht_bezoekers: '', publiek: [], genres: [],
   instagram_tags: '', crosspost_instagram: false, instagram_audio: '', promotie_kanalen: [],
   deelnemende_venues: [],
   extra_secties: [{ titel: '', tekst: '' }],
+  extra_knoppen: [{ ...leegKnop }],
+  banner_fotos: [],
+  centrum_logo_url: '',
 };
 
 export default function AdminEvents() {
@@ -114,6 +131,9 @@ export default function AdminEvents() {
   const [toonVenueLijst, setToonVenueLijst] = useState(false);
   const [eigenGenre, setEigenGenre] = useState('');
   const [eigenPubliek, setEigenPubliek] = useState('');
+  const [subEvents, setSubEvents] = useState([]);
+  const [bannerBezig, setBannerBezig] = useState({});
+  const [centrumLogoBezig, setCentrumLogoBezig] = useState(false);
 
   useEffect(() => { laadEvents(); laadVenues(); }, []);
 
@@ -131,6 +151,44 @@ export default function AdminEvents() {
   async function laadVenues() {
     const { data } = await supabase.from('venues').select('id, naam, adres, logo_url').order('naam');
     setVenues(data || []);
+  }
+
+  async function laadSubEvents(centrumId) {
+    const { data } = await supabase.from('events').select('*')
+      .eq('centrumbreed_id', centrumId).order('datum');
+    setSubEvents(data || []);
+  }
+
+  async function toggleCentrumLink(eventId, huidig) {
+    await supabase.from('events').update({ centrumbreed_link_goedgekeurd: !huidig }).eq('id', eventId);
+    setSubEvents(s => s.map(e => e.id === eventId ? { ...e, centrumbreed_link_goedgekeurd: !huidig } : e));
+    toonMelding(!huidig ? '✓ Koppeling goedgekeurd' : 'Koppeling verborgen');
+  }
+
+  async function uploadBannerFoto(file, index) {
+    setBannerBezig(p => ({ ...p, [index]: true }));
+    const ext = file.name.split('.').pop();
+    const naam = `banner-${Date.now()}-${index}.${ext}`;
+    const { error } = await supabase.storage.from('posters').upload(naam, file, { upsert: true });
+    if (!error) {
+      const { data } = supabase.storage.from('posters').getPublicUrl(naam);
+      const banners = [...(form.banner_fotos || [])];
+      banners[index] = data.publicUrl;
+      upd('banner_fotos', banners.filter(Boolean));
+    }
+    setBannerBezig(p => ({ ...p, [index]: false }));
+  }
+
+  async function uploadCentrumLogo(file) {
+    setCentrumLogoBezig(true);
+    const ext = file.name.split('.').pop();
+    const naam = `centrum-logo-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('posters').upload(naam, file, { upsert: true });
+    if (!error) {
+      const { data } = supabase.storage.from('posters').getPublicUrl(naam);
+      upd('centrum_logo_url', data.publicUrl);
+    }
+    setCentrumLogoBezig(false);
   }
 
   function kiesVenue(v) {
@@ -153,7 +211,7 @@ export default function AdminEvents() {
       adres: ev.adres || '', omschrijving: ev.omschrijving || '',
       ticket_url: ev.ticket_url || '', ticket_shortcode: ev.ticket_shortcode || '',
       venue_naam: ev.venue_naam || '', goedgekeurd: ev.goedgekeurd ?? true, hot: ev.hot ?? false,
-      knop_label: ev.knop_label || '', knop_url: ev.knop_url || '',
+      is_centrumbreed: ev.is_centrumbreed ?? false,
       meta_pixel_id: ev.meta_pixel_id || '', tiktok_pixel_id: ev.tiktok_pixel_id || '',
       artiesten: ei.artiesten || '', verwacht_bezoekers: ei.verwacht_bezoekers || '',
       publiek: ei.publiek || [], genres: ei.genres || [],
@@ -163,10 +221,16 @@ export default function AdminEvents() {
       promotie_kanalen: ei.promotie_kanalen || [],
       deelnemende_venues: ei.deelnemende_venues || [],
       extra_secties: ei.extra_secties?.length ? ei.extra_secties : [{ titel: '', tekst: '' }],
+      extra_knoppen: ei.extra_knoppen?.length ? ei.extra_knoppen
+        : (ev.knop_label ? [{ label: ev.knop_label, url: ev.knop_url || '', kleur: '#F27A00', tekst: '#000' }] : [{ ...leegKnop }]),
+      banner_fotos: ei.banner_fotos || [],
+      centrum_logo_url: ei.centrum_logo_url || '',
     });
     setPosterFile(null);
     setPosterPreview(ev.poster_url || null);
     setBewerkId(ev.id);
+    setSubEvents([]);
+    if (ev.is_centrumbreed) laadSubEvents(ev.id);
     setToonForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -238,9 +302,9 @@ export default function AdminEvents() {
       ticket_url: form.ticket_url || null, ticket_shortcode: form.ticket_shortcode || null,
       venue_naam: form.venue_naam, goedgekeurd: form.goedgekeurd,
       eigenaar_id: user?.id, poster_url: poster_url || null,
-      knop_label: form.knop_label || null, knop_url: form.knop_url || null,
       meta_pixel_id: form.meta_pixel_id || null, tiktok_pixel_id: form.tiktok_pixel_id || null,
       hot: form.hot,
+      is_centrumbreed: form.is_centrumbreed,
       extra_info: {
         artiesten: form.artiesten || null,
         verwacht_bezoekers: form.verwacht_bezoekers || null,
@@ -252,6 +316,9 @@ export default function AdminEvents() {
         promotie_kanalen: form.promotie_kanalen,
         deelnemende_venues: form.deelnemende_venues,
         extra_secties: form.extra_secties.filter(s => s.titel || s.tekst),
+        extra_knoppen: form.extra_knoppen.filter(k => k.label),
+        banner_fotos: form.banner_fotos.filter(Boolean),
+        centrum_logo_url: form.centrum_logo_url || null,
       },
     };
 
@@ -327,6 +394,23 @@ export default function AdminEvents() {
             </div>
 
             <form onSubmit={opslaan_} className="space-y-5">
+
+              {/* Centrumbreed toggle */}
+              <div className={`${SEC} border-2 ${form.is_centrumbreed ? 'border-oranje/50 bg-oranje/5' : 'border-[#2a2a2a]'}`} style={{ backgroundColor: form.is_centrumbreed ? 'rgba(242,122,0,0.05)' : '#0d0d0d' }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-black uppercase" style={{ fontFamily: "'Big Shoulders Display', sans-serif", color: form.is_centrumbreed ? '#F27A00' : '#888' }}>
+                      🏙️ Centrumbreed evenement
+                    </p>
+                    <p className="text-xs text-gray-600 mt-0.5">Overstijgt een enkele locatie — meerdere zaken doen mee</p>
+                  </div>
+                  <button type="button"
+                    onClick={() => { upd('is_centrumbreed', !form.is_centrumbreed); if (!form.is_centrumbreed && bewerkId) laadSubEvents(bewerkId); }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.is_centrumbreed ? 'bg-oranje' : 'bg-[#333]'}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.is_centrumbreed ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              </div>
 
               {/* Basisinfo */}
               <div className={SEC} style={{ backgroundColor: '#0d0d0d' }}>
@@ -434,6 +518,61 @@ export default function AdminEvents() {
                 </div>
               </div>
 
+              {/* Centrum logo + banner (alleen bij centrumbreed) */}
+              {form.is_centrumbreed && (
+                <div className={SEC} style={{ backgroundColor: '#0d0d0d' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Centrum logo & banner foto's</p>
+
+                  {/* Logo */}
+                  <div>
+                    <label className="text-xs font-bold uppercase text-gray-500 block mb-2">Event logo</label>
+                    <div className="flex items-center gap-3">
+                      <div className="w-16 h-16 rounded-xl overflow-hidden border border-[#2a2a2a] bg-[#141414] flex items-center justify-center flex-shrink-0">
+                        {form.centrum_logo_url
+                          ? <img src={form.centrum_logo_url} alt="" className="w-full h-full object-cover" />
+                          : <svg width="20" height="20" fill="none" stroke="#444" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>}
+                      </div>
+                      <label className="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg border border-[#2a2a2a] text-gray-400 text-xs hover:border-oranje hover:text-oranje transition-colors">
+                        {centrumLogoBezig ? <div className="w-3 h-3 border border-oranje border-t-transparent rounded-full animate-spin" /> : '↑'}
+                        Logo uploaden
+                        <input type="file" accept="image/*" onChange={e => e.target.files?.[0] && uploadCentrumLogo(e.target.files[0])} className="hidden" />
+                      </label>
+                      {form.centrum_logo_url && (
+                        <button type="button" onClick={() => upd('centrum_logo_url', '')} className="text-xs text-red-400 hover:text-red-300">Verwijder</button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Banner fotos */}
+                  <div>
+                    <label className="text-xs font-bold uppercase text-gray-500 block mb-2">Banner foto's <span className="normal-case font-normal text-gray-600">(max 4)</span></label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[0,1,2,3].map(i => {
+                        const url = form.banner_fotos[i] || null;
+                        return (
+                          <div key={i} className="relative rounded-lg overflow-hidden border border-[#2a2a2a] bg-[#141414] flex items-center justify-center" style={{ aspectRatio: '16/9' }}>
+                            {url ? (
+                              <>
+                                <img src={url} alt="" className="w-full h-full object-cover" />
+                                <button type="button" onClick={() => { const f=[...form.banner_fotos]; f.splice(i,1); upd('banner_fotos',f.filter(Boolean)); }}
+                                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white text-[10px] flex items-center justify-center hover:bg-red-600">✕</button>
+                              </>
+                            ) : (
+                              <label className="w-full h-full flex items-center justify-center cursor-pointer hover:bg-[#1e1e1e] transition-colors">
+                                {bannerBezig[i]
+                                  ? <div className="w-4 h-4 border-2 border-oranje border-t-transparent rounded-full animate-spin" />
+                                  : <span className="text-gray-600 text-lg">+</span>}
+                                <input type="file" accept="image/*" onChange={e => e.target.files?.[0] && uploadBannerFoto(e.target.files[0], i)} className="hidden" disabled={bannerBezig[i]} />
+                              </label>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Omschrijving */}
               <div className={SEC} style={{ backgroundColor: '#0d0d0d' }}>
                 <div className="flex items-center justify-between">
@@ -528,18 +667,48 @@ export default function AdminEvents() {
                 </div>
               </div>
 
-              {/* Eigen knop & pixels */}
+              {/* Knoppen */}
               <div className={SEC} style={{ backgroundColor: '#0d0d0d' }}>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Eigen knop & Tracking</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Knoppen</p>
+                  <button type="button" onClick={() => upd('extra_knoppen', [...form.extra_knoppen, { ...leegKnop }])}
+                    className="text-xs text-gray-500 border border-[#333] px-3 py-1 rounded-lg hover:border-oranje hover:text-oranje transition-colors">
+                    + Knop toevoegen
+                  </button>
+                </div>
+                {form.extra_knoppen.map((knop, i) => (
+                  <div key={i} className="border border-[#1e1e1e] rounded-xl p-3 space-y-2">
+                    <div className="flex gap-2">
+                      <input value={knop.label} onChange={e => { const k=[...form.extra_knoppen]; k[i]={...k[i],label:e.target.value}; upd('extra_knoppen',k); }}
+                        placeholder="Knoptekst" maxLength={30} className={INP + ' flex-1'} />
+                      <input type="url" value={knop.url} onChange={e => { const k=[...form.extra_knoppen]; k[i]={...k[i],url:e.target.value}; upd('extra_knoppen',k); }}
+                        placeholder="https://..." className={INP + ' flex-1'} />
+                      {form.extra_knoppen.length > 1 && (
+                        <button type="button" onClick={() => { const k=[...form.extra_knoppen]; k.splice(i,1); upd('extra_knoppen',k); }}
+                          className="text-red-400 hover:text-red-300 text-xs px-2">✕</button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-gray-600">Kleur:</span>
+                      {KNOP_KLEUREN.map(c => (
+                        <button key={c.value} type="button"
+                          onClick={() => { const k=[...form.extra_knoppen]; k[i]={...k[i],kleur:c.value,tekst:c.tekst}; upd('extra_knoppen',k); }}
+                          title={c.label}
+                          className={`w-6 h-6 rounded-full border-2 transition-all ${knop.kleur === c.value ? 'border-white scale-110' : 'border-transparent'}`}
+                          style={{ backgroundColor: c.value === 'transparent' ? 'transparent' : c.value, borderColor: knop.kleur === c.value ? '#fff' : c.value === 'transparent' ? '#555' : 'transparent' }} />
+                      ))}
+                      <span className="ml-2 px-3 py-1 rounded-lg text-xs font-bold" style={{ backgroundColor: knop.kleur === 'transparent' ? 'transparent' : knop.kleur, color: knop.tekst, border: knop.kleur === 'transparent' ? '1px solid #F27A00' : 'none' }}>
+                        {knop.label || 'Voorbeeld'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tracking pixels */}
+              <div className={SEC} style={{ backgroundColor: '#0d0d0d' }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Tracking</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-bold uppercase text-gray-500 block mb-1">Knoptekst</label>
-                    <input value={form.knop_label} onChange={e => upd('knop_label', e.target.value)} placeholder="Bestel tickets" className={INP} maxLength={30} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold uppercase text-gray-500 block mb-1">Knop URL</label>
-                    <input type="url" value={form.knop_url} onChange={e => upd('knop_url', e.target.value)} placeholder="https://..." className={INP} />
-                  </div>
                   <div>
                     <label className="text-xs font-bold uppercase text-gray-500 block mb-1">Meta Pixel ID</label>
                     <input value={form.meta_pixel_id} onChange={e => upd('meta_pixel_id', e.target.value)} placeholder="123456789" className={INP} />
@@ -597,6 +766,34 @@ export default function AdminEvents() {
                   </div>
                 ))}
               </div>
+
+              {/* Gekoppelde sub-events (centrumbreed) */}
+              {form.is_centrumbreed && bewerkId && (
+                <div className={SEC} style={{ backgroundColor: '#0d0d0d' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Gekoppelde events van locaties</p>
+                  {subEvents.length === 0 ? (
+                    <p className="text-xs text-gray-600">Nog geen events gekoppeld. Zaken kunnen hun event aan dit evenement koppelen via het event-aanmeldsysteem.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {subEvents.map(se => (
+                        <div key={se.id} className="flex items-center gap-3 border border-[#1e1e1e] rounded-xl p-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-white truncate">{se.title}</p>
+                            <p className="text-xs text-gray-500">{se.venue_naam} · {se.datum} · {se.prijs}</p>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0 ${se.centrumbreed_link_goedgekeurd ? 'bg-green-950/50 text-green-400' : 'bg-yellow-950/50 text-yellow-500'}`}>
+                            {se.centrumbreed_link_goedgekeurd ? 'Goedgekeurd' : 'Wacht'}
+                          </span>
+                          <button type="button" onClick={() => toggleCentrumLink(se.id, se.centrumbreed_link_goedgekeurd)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold border border-[#333] text-gray-400 hover:text-white transition-colors flex-shrink-0">
+                            {se.centrumbreed_link_goedgekeurd ? 'Verberg' : 'Goedkeuren'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Publicatie */}
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1">

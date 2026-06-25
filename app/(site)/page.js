@@ -143,7 +143,7 @@ export default function Home() {
   useEffect(() => {
     const vandaag = new Date().toISOString().split('T')[0];
     Promise.all([
-      supabase.from('events').select('*').eq('goedgekeurd', true).gte('datum', vandaag).order('datum').limit(20),
+      supabase.from('events').select('*').eq('goedgekeurd', true).gte('datum', vandaag).is('centrumbreed_id', null).order('datum').limit(20),
       supabase.from('venues').select('*').eq('actief', true),
       supabase.from('nieuws').select('*').eq('gepubliceerd', true).order('created_at', { ascending: false }).limit(6),
     ]).then(([evRes, veRes, niRes]) => {
