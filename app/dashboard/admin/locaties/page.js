@@ -33,6 +33,7 @@ const leegForm = {
   openingstijden: leegTijden(),
   kroegentocht_actief: false,
   kroegentocht_gewicht: 1,
+  extra_knoppen: [{ label: '', url: '' }, { label: '', url: '' }],
 };
 
 export default function AdminLocaties() {
@@ -75,6 +76,9 @@ export default function AdminLocaties() {
       openingstijden: tijden,
       kroegentocht_actief: v.kroegentocht_actief || false,
       kroegentocht_gewicht: v.kroegentocht_gewicht || 1,
+      extra_knoppen: Array.isArray(v.extra_knoppen) && v.extra_knoppen.length === 2
+        ? v.extra_knoppen
+        : [{ label: v.extra_knoppen?.[0]?.label||'', url: v.extra_knoppen?.[0]?.url||'' }, { label: v.extra_knoppen?.[1]?.label||'', url: v.extra_knoppen?.[1]?.url||'' }],
     });
     setBewerkId(v.id);
     setToonForm(true);
@@ -99,6 +103,7 @@ export default function AdminLocaties() {
       openingstijden: form.openingstijden,
       kroegentocht_actief: form.kroegentocht_actief,
       kroegentocht_gewicht: form.kroegentocht_gewicht || 1,
+      extra_knoppen: form.extra_knoppen.filter(k => k.label.trim()),
       updated_at: new Date().toISOString(),
     };
     if (bewerkId) {
@@ -435,18 +440,48 @@ export default function AdminLocaties() {
                   )}
                 </div>
 
+                {/* Extra knoppen */}
+                <div className="col-span-2 border-t border-[#1e1e1e] pt-4">
+                  <label className="text-xs font-bold uppercase text-gray-500 block mb-3">Extra knoppen <span className="normal-case font-normal text-gray-600">(optioneel)</span></label>
+                  {[0, 1].map(i => (
+                    <div key={i} className="flex gap-2 mb-2">
+                      <input
+                        value={form.extra_knoppen[i]?.label || ''}
+                        onChange={e => { const k=[...form.extra_knoppen]; k[i]={...k[i],label:e.target.value}; upd('extra_knoppen',k); }}
+                        placeholder={`Knop ${i+1} label (bijv. "Menu")`}
+                        className={INP + ' flex-1'}
+                      />
+                      <input
+                        type="url"
+                        value={form.extra_knoppen[i]?.url || ''}
+                        onChange={e => { const k=[...form.extra_knoppen]; k[i]={...k[i],url:e.target.value}; upd('extra_knoppen',k); }}
+                        placeholder="https://... (optioneel)"
+                        className={INP + ' flex-1'}
+                      />
+                    </div>
+                  ))}
+                </div>
+
                 <div className="col-span-2 flex items-center gap-3">
                   <input type="checkbox" id="actief" checked={form.actief} onChange={e=>upd('actief',e.target.checked)} className="accent-oranje" />
                   <label htmlFor="actief" className="text-sm text-gray-400 cursor-pointer">Actief (zichtbaar op de site)</label>
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-2 flex-wrap">
                 <button type="submit" disabled={bezig}
                   className="px-6 py-2.5 rounded-lg font-black uppercase text-sm text-black disabled:opacity-50"
                   style={{ backgroundColor: '#F27A00', fontFamily: "'Big Shoulders Display', sans-serif" }}>
                   {bezig ? 'Opslaan...' : bewerkId ? 'Opslaan' : 'Aanmaken'}
                 </button>
+                {bewerkId && (
+                  <button type="button"
+                    onClick={() => { const v = venues.find(x => x.id === bewerkId); if (v) syncGoogle(v); }}
+                    disabled={bewerkId ? syncBezig[bewerkId] : false}
+                    className="px-5 py-2.5 rounded-lg text-sm font-bold border border-blue-800/50 text-blue-400 hover:border-blue-500 hover:text-blue-300 transition-colors disabled:opacity-40">
+                    {syncBezig[bewerkId] ? '⏳ Syncing...' : '🔄 Sync met Google'}
+                  </button>
+                )}
                 <button type="button" onClick={() => setToonForm(false)}
                   className="px-6 py-2.5 rounded-lg text-sm text-gray-400 border border-[#333] hover:text-white">Annuleren</button>
               </div>
@@ -487,6 +522,20 @@ export default function AdminLocaties() {
                   {v.actief ? 'Actief' : 'Verborgen'}
                 </span>
                 <div className="flex gap-2 flex-shrink-0">
+                  {v.instagram && (
+                    <a href={`https://instagram.com/${v.instagram}`} target="_blank" rel="noopener noreferrer"
+                      title={`@${v.instagram}`}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-[#333] text-pink-400 hover:border-pink-500 hover:text-pink-300 transition-colors">
+                      IG
+                    </a>
+                  )}
+                  {v.website && (
+                    <a href={v.website} target="_blank" rel="noopener noreferrer"
+                      title={v.website}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-[#333] text-blue-400 hover:border-blue-500 hover:text-blue-300 transition-colors">
+                      🌐
+                    </a>
+                  )}
                   <button onClick={() => syncGoogle(v)} disabled={syncBezig[v.id]}
                     title="Openingstijden ophalen van Google"
                     className="px-3 py-1.5 rounded-lg text-xs font-bold border border-[#333] text-gray-400 hover:border-blue-500 hover:text-blue-400 transition-colors disabled:opacity-40">

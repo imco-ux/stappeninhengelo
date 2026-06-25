@@ -335,7 +335,9 @@ export default function PrijzenPage() {
       const prijsData = prijsRes.data || [];
 
       // Groepeer prijzen per venue
+      const ETEN_TYPES = ['Cafetaria','Döner / Shoarma','Snackbar','Friettent','Pizzeria','Burger','Sushi / Aziatisch','Eetcafé'];
       const venuesMetPrijzen = venueData
+        .filter(v => !ETEN_TYPES.includes(v.type))
         .map(v => {
           const dranken = prijsData
             .filter(p => p.venue_id === v.id || p.venue_naam === v.naam)

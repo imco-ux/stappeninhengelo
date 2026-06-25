@@ -612,6 +612,25 @@ export default function AdminEvents() {
                       {ev.goedgekeurd ? 'Live' : 'Wacht'}
                     </span>
                     <div className="flex gap-2 flex-shrink-0">
+                      {(() => {
+                        const venue = venues.find(vn => vn.naam === ev.venue_naam);
+                        return (<>
+                          {venue?.instagram && (
+                            <a href={`https://instagram.com/${venue.instagram}`} target="_blank" rel="noopener noreferrer"
+                              title={`@${venue.instagram}`}
+                              className="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-[#333] text-pink-400 hover:border-pink-500 hover:text-pink-300 transition-colors">
+                              IG
+                            </a>
+                          )}
+                          {(ev.knop_url || venue?.website) && (
+                            <a href={ev.knop_url || venue.website} target="_blank" rel="noopener noreferrer"
+                              title={ev.knop_url || venue.website}
+                              className="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-[#333] text-blue-400 hover:border-blue-500 hover:text-blue-300 transition-colors">
+                              🌐
+                            </a>
+                          )}
+                        </>);
+                      })()}
                       <button onClick={() => setOpenDetail(isOpen ? null : ev.id)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${isOpen ? 'bg-blue-950/40 border-blue-700/50 text-blue-400' : 'border-[#333] text-gray-600 hover:text-blue-400 hover:border-blue-700/50'}`}>
                         {isOpen ? '▲ Info' : '▼ Info'}
