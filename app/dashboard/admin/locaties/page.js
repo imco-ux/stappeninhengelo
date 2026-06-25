@@ -89,10 +89,12 @@ export default function AdminLocaties() {
       updated_at: new Date().toISOString(),
     };
     if (bewerkId) {
-      await supabase.from('venues').update(payload).eq('id', bewerkId);
+      const { error } = await supabase.from('venues').update(payload).eq('id', bewerkId);
+      if (error) { toonMelding('❌ Opslaan mislukt: ' + error.message); setBezig(false); return; }
       toonMelding('Locatie opgeslagen ✓');
     } else {
-      await supabase.from('venues').insert(payload);
+      const { error } = await supabase.from('venues').insert(payload);
+      if (error) { toonMelding('❌ Aanmaken mislukt: ' + error.message); setBezig(false); return; }
       toonMelding('Locatie aangemaakt ✓');
     }
     setBezig(false);
